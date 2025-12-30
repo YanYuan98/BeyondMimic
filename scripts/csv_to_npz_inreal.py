@@ -18,7 +18,7 @@ from isaaclab.app import AppLauncher
 parser = argparse.ArgumentParser(description="Replay motion from csv file and output to npz file.")
 parser.add_argument("--input_file", type=str, required=True, help="The path to the input motion csv file.")
 parser.add_argument("--input_fps", type=int, default=30, help="The fps of the input motion.")
-parser.add_argument("--robot_name", type=str, default="unitree_g1", choices=["inreal", "unitree_g1"])
+parser.add_argument("--robot_name", type=str, default="unitree_g1", choices=["inreal", "inreal_v2", "unitree_g1"])
 parser.add_argument(
     "--frame_range",
     nargs=2,
@@ -58,6 +58,7 @@ from isaaclab.utils.math import axis_angle_from_quat, quat_conjugate, quat_mul, 
 ##
 from whole_body_tracking.robots.g1 import G1_CYLINDER_CFG
 from whole_body_tracking.robots.Inreal import Inreal_CYLINDER_CFG
+from whole_body_tracking.robots.Inreal_v2 import Inreal_V2_CYLINDER_CFG
 
 
 # -------------------------- enviroment setting --------------------------
@@ -84,6 +85,9 @@ class ReplayMotionsSceneCfg(InteractiveSceneCfg):
     elif args_cli.robot_name=="inreal":
         print("[Robot] Inreal robot!")
         robot: ArticulationCfg = Inreal_CYLINDER_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    elif args_cli.robot_name=="inreal_v2":
+        print("[Robot] Inreal-v2 robot!")
+        robot: ArticulationCfg = Inreal_V2_CYLINDER_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
 
 # -------------------------- Moiton Dataset Loading --------------------------
