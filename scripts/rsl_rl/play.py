@@ -110,6 +110,30 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
         print(f"[INFO]: Loading model checkpoint from: {resume_path}")
 
+    # disable randomization, noise, and disturbance forces for clean play
+    # NOTE: do NOT set `env_cfg.events = None` because manager code expects an events
+    # config object. Instead, disable individual event terms so the managers keep a valid cfg.
+    if getattr(env_cfg, "events", None) is not None:
+        for _name, _term in env_cfg.events.__dict__.items():
+            if _term is None:
+                continue
+            # try to disable by clearing the execution mode if available
+            if hasattr(_term, "mode"):
+                try:
+                    _term.mode = None
+                except Exception:
+                    # fall back to removing the term
+                    try:
+                        setattr(env_cfg.events, _name, None)
+                    except Exception:
+                        pass
+    # disable observation noise
+    for obs_group in [env_cfg.observations.policy, env_cfg.observations.critic]:
+        for obs_term in obs_group.to_dict().values():
+            if hasattr(obs_term, "noise"):
+                obs_term.noise = None
+    print("[INFO] Disabled randomization, noise, and disturbance forces for play mode.")
+
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
 
@@ -159,6 +183,25 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
+            # get current robot joint states (位置和速度)
+            try:
+                robot = env.unwrapped.scene["robot"]
+                joint_pos = robot.data.joint_pos  # shape: (num_envs, num_joints)
+                joint_vel = robot.data.joint_vel  # shape: (num_envs, num_joints)
+                
+                # print for first environment only to avoid clutter
+                # 从底层环境中获取 MotionCommand 对象（使用 unwrapped 访问底层环境）
+                motion_command = env.unwrapped.command_manager.get_term("motion")
+
+                # 获取当前的时间步
+                if timestep == 0:  # print every 50 steps
+                    print("time_steps: ", motion_command.time_steps)
+                    print("obs: ", obs)
+                    print(f"[Step {timestep}] Robot joint_pos: {joint_pos[0].cpu().numpy()}")
+                    print(f"[Step {timestep}] Robot joint_vel: {joint_vel[0].cpu().numpy()}")
+            except Exception:
+                pass
+
             # agent stepping
             actions = policy(obs)
             # env stepping

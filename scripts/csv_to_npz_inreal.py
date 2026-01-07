@@ -244,8 +244,10 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joi
     robot = scene["robot"]
     robot_joint_indexes = robot.find_joints(joint_names, preserve_order=True)[0]
     waist_pitch_id = robot.find_joints("waist_pitch_joint", preserve_order=True)[0]
-    # print("joint name: ", joint_names)
-    # print("joint index: ", robot_joint_indexes, waist_pitch_id)
+    print("joint name: ", joint_names)
+    print("joint index: ", robot_joint_indexes, waist_pitch_id)
+    sorted_joint_name = [x for _, x in sorted(zip(robot_joint_indexes, joint_names))]
+    print("urdf joint name: ", sorted_joint_name)
 
     # ------- data logger -------------------------------------------------------
     log = {

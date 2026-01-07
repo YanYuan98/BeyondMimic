@@ -85,7 +85,7 @@ Below is an overview of the code structure for this repository:
   Contains the environment (MDP) hyperparameters configuration for the tracking task.
 
 - **`source/whole_body_tracking/whole_body_tracking/tasks/tracking/config/g1/agents/rsl_rl_ppo_cfg.py`**
-  Contains the PPO hyperparameters for the tracking task.
+  Contains the PPO hyperparameters for the  tracking task.
 
 - **`source/whole_body_tracking/whole_body_tracking/robots`**
   Contains robot-specific settings, including armature parameters, joint stiffness/damping calculation, and action scale

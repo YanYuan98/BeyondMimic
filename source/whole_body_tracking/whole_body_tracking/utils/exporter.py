@@ -99,12 +99,19 @@ def attach_onnx_metadata(env: ManagerBasedRLEnv, run_path: str, path: str, filen
             history_length = term_cfg["history_length"]
             observation_history_lengths.append(1 if history_length == 0 else history_length)
 
+    # Get default joint pos - use nominal if available (created by randomize event), otherwise use base default
+    robot_data = env.scene["robot"].data
+    if hasattr(robot_data, "default_joint_pos_nominal"):
+        default_joint_pos = robot_data.default_joint_pos_nominal.cpu().tolist()
+    else:
+        default_joint_pos = robot_data.default_joint_pos[0].cpu().tolist()
+
     metadata = {
         "run_path": run_path,
         "joint_names": env.scene["robot"].data.joint_names,
         "joint_stiffness": env.scene["robot"].data.joint_stiffness[0].cpu().tolist(),
         "joint_damping": env.scene["robot"].data.joint_damping[0].cpu().tolist(),
-        "default_joint_pos": env.scene["robot"].data.default_joint_pos_nominal.cpu().tolist(),
+        "default_joint_pos": default_joint_pos,
         "command_names": env.command_manager.active_terms,
         "observation_names": observation_names,
         "observation_history_lengths": observation_history_lengths,
