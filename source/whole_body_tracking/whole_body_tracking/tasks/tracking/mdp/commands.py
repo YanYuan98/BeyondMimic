@@ -70,6 +70,8 @@ class MotionCommand(CommandTerm):
         self.body_indexes = torch.tensor(
             self.robot.find_bodies(self.cfg.body_names, preserve_order=True)[0], dtype=torch.long, device=self.device
         )
+        # Test mode flag: in test mode, always start from time_steps=0 without random sampling
+        self.is_test_mode = self.cfg.is_test_mode
 
         self.motion = MotionLoader(self.cfg.motion_file, self.body_indexes, device=self.device)
         self.time_steps = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
@@ -205,45 +207,45 @@ class MotionCommand(CommandTerm):
         self.metrics["error_joint_vel"] = torch.norm(self.joint_vel - self.robot_joint_vel, dim=-1)
 
     def _adaptive_sampling(self, env_ids: Sequence[int]):
-        self.time_steps[env_ids] = torch.zeros(
-            (len(env_ids),),
-            device=self.device,
-            dtype=self.time_steps.dtype,
+        # In test mode, always reset to time_steps=0 without random sampling
+        if self.is_test_mode:
+            self.time_steps[env_ids] = 0
+            return
+
+        episode_failed = self._env.termination_manager.terminated[env_ids]
+        if torch.any(episode_failed):
+            current_bin_index = torch.clamp(
+                (self.time_steps * self.bin_count) // max(self.motion.time_step_total, 1), 0, self.bin_count - 1
+            )
+            fail_bins = current_bin_index[env_ids][episode_failed]
+            self._current_bin_failed[:] = torch.bincount(fail_bins, minlength=self.bin_count)
+
+        # Sample
+        sampling_probabilities = self.bin_failed_count + self.cfg.adaptive_uniform_ratio / float(self.bin_count)
+        sampling_probabilities = torch.nn.functional.pad(
+            sampling_probabilities.unsqueeze(0).unsqueeze(0),
+            (0, self.cfg.adaptive_kernel_size - 1),  # Non-causal kernel
+            mode="replicate",
         )
-        # episode_failed = self._env.termination_manager.terminated[env_ids]
-        # if torch.any(episode_failed):
-        #     current_bin_index = torch.clamp(
-        #         (self.time_steps * self.bin_count) // max(self.motion.time_step_total, 1), 0, self.bin_count - 1
-        #     )
-        #     fail_bins = current_bin_index[env_ids][episode_failed]
-        #     self._current_bin_failed[:] = torch.bincount(fail_bins, minlength=self.bin_count)
+        sampling_probabilities = torch.nn.functional.conv1d(sampling_probabilities, self.kernel.view(1, 1, -1)).view(-1)
 
-        # # Sample
-        # sampling_probabilities = self.bin_failed_count + self.cfg.adaptive_uniform_ratio / float(self.bin_count)
-        # sampling_probabilities = torch.nn.functional.pad(
-        #     sampling_probabilities.unsqueeze(0).unsqueeze(0),
-        #     (0, self.cfg.adaptive_kernel_size - 1),  # Non-causal kernel
-        #     mode="replicate",
-        # )
-        # sampling_probabilities = torch.nn.functional.conv1d(sampling_probabilities, self.kernel.view(1, 1, -1)).view(-1)
+        sampling_probabilities = sampling_probabilities / sampling_probabilities.sum()
 
-        # sampling_probabilities = sampling_probabilities / sampling_probabilities.sum()
+        sampled_bins = torch.multinomial(sampling_probabilities, len(env_ids), replacement=True)
 
-        # sampled_bins = torch.multinomial(sampling_probabilities, len(env_ids), replacement=True)
+        self.time_steps[env_ids] = (
+            (sampled_bins + sample_uniform(0.0, 1.0, (len(env_ids),), device=self.device))
+            / self.bin_count
+            * (self.motion.time_step_total - 1)
+        ).long()
 
-        # self.time_steps[env_ids] = (
-        #     (sampled_bins + sample_uniform(0.0, 1.0, (len(env_ids),), device=self.device))
-        #     / self.bin_count
-        #     * (self.motion.time_step_total - 1)
-        # ).long()
-
-        # # Metrics
-        # H = -(sampling_probabilities * (sampling_probabilities + 1e-12).log()).sum()
-        # H_norm = H / math.log(self.bin_count)
-        # pmax, imax = sampling_probabilities.max(dim=0)
-        # self.metrics["sampling_entropy"][:] = H_norm
-        # self.metrics["sampling_top1_prob"][:] = pmax
-        # self.metrics["sampling_top1_bin"][:] = imax.float() / self.bin_count
+        # Metrics
+        H = -(sampling_probabilities * (sampling_probabilities + 1e-12).log()).sum()
+        H_norm = H / math.log(self.bin_count)
+        pmax, imax = sampling_probabilities.max(dim=0)
+        self.metrics["sampling_entropy"][:] = H_norm
+        self.metrics["sampling_top1_prob"][:] = pmax
+        self.metrics["sampling_top1_bin"][:] = imax.float() / self.bin_count
 
     def _resample_command(self, env_ids: Sequence[int]):
         if len(env_ids) == 0:
@@ -255,26 +257,33 @@ class MotionCommand(CommandTerm):
         root_lin_vel = self.body_lin_vel_w[:, 0].clone()
         root_ang_vel = self.body_ang_vel_w[:, 0].clone()
 
-        range_list = [self.cfg.pose_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
-        ranges = torch.tensor(range_list, device=self.device)
-        rand_samples = sample_uniform(ranges[:, 0], ranges[:, 1], (len(env_ids), 6), device=self.device)
-        root_pos[env_ids] += rand_samples[:, 0:3]
-        orientations_delta = quat_from_euler_xyz(rand_samples[:, 3], rand_samples[:, 4], rand_samples[:, 5])
-        root_ori[env_ids] = quat_mul(orientations_delta, root_ori[env_ids])
-        range_list = [self.cfg.velocity_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
-        ranges = torch.tensor(range_list, device=self.device)
-        rand_samples = sample_uniform(ranges[:, 0], ranges[:, 1], (len(env_ids), 6), device=self.device)
-        root_lin_vel[env_ids] += rand_samples[:, :3]
-        root_ang_vel[env_ids] += rand_samples[:, 3:]
-
         joint_pos = self.joint_pos.clone()
         joint_vel = self.joint_vel.clone()
 
-        joint_pos += sample_uniform(*self.cfg.joint_position_range, joint_pos.shape, joint_pos.device)
+        # In test mode, use default values (no random sampling); otherwise, apply random perturbations
+        if not self.is_test_mode:
+            range_list = [self.cfg.pose_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
+            ranges = torch.tensor(range_list, device=self.device)
+            rand_samples = sample_uniform(ranges[:, 0], ranges[:, 1], (len(env_ids), 6), device=self.device)
+            root_pos[env_ids] += rand_samples[:, 0:3]
+            orientations_delta = quat_from_euler_xyz(rand_samples[:, 3], rand_samples[:, 4], rand_samples[:, 5])
+            root_ori[env_ids] = quat_mul(orientations_delta, root_ori[env_ids])
+            range_list = [self.cfg.velocity_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
+            ranges = torch.tensor(range_list, device=self.device)
+            rand_samples = sample_uniform(ranges[:, 0], ranges[:, 1], (len(env_ids), 6), device=self.device)
+            root_lin_vel[env_ids] += rand_samples[:, :3]
+            root_ang_vel[env_ids] += rand_samples[:, 3:]
+
+            joint_pos += sample_uniform(*self.cfg.joint_position_range, joint_pos.shape, joint_pos.device)
+       
         soft_joint_pos_limits = self.robot.data.soft_joint_pos_limits[env_ids]
         joint_pos[env_ids] = torch.clip(
             joint_pos[env_ids], soft_joint_pos_limits[:, :, 0], soft_joint_pos_limits[:, :, 1]
         )
+        print("joint_pos: ", joint_pos[0])
+        print("joint_vel: ", joint_vel[0])
+        print("root_pos: ", root_pos[0], root_ori[0])
+
         self.robot.write_joint_state_to_sim(joint_pos[env_ids], joint_vel[env_ids], env_ids=env_ids)
         self.robot.write_root_state_to_sim(
             torch.cat([root_pos[env_ids], root_ori[env_ids], root_lin_vel[env_ids], root_ang_vel[env_ids]], dim=-1),
@@ -374,6 +383,9 @@ class MotionCommandCfg(CommandTermCfg):
     adaptive_lambda: float = 0.8
     adaptive_uniform_ratio: float = 0.1
     adaptive_alpha: float = 0.001
+
+    # Test mode: if True, always reset from time_steps=0 without random sampling
+    is_test_mode: bool = False
 
     anchor_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/Command/pose")
     anchor_visualizer_cfg.markers["frame"].scale = (0.2, 0.2, 0.2)

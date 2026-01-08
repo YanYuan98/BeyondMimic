@@ -25,117 +25,157 @@ Robot:
       default_joint_pos: 0.0
       action_scale: 0.14445
       clip: 495
+      q_min: -1.57
+      q_max: 1.57
     right_hip_pitch_joint:
       stiffness: 856.68
       damping: 54.538
       default_joint_pos: 0.0
       action_scale: 0.14445
       clip: 495
+      q_min: -1.57
+      q_max: 1.57
     waist_pitch_joint:
-      stiffness: 202.13
-      damping: 12.868
+      stiffness: 404.259
+      damping: 25.7359
       default_joint_pos: 0.0
       action_scale: 0.20778
       clip: 336
+      q_min: -1.57
+      q_max: 1.57
     left_hip_roll_joint:
       stiffness: 714.56
       damping: 45.49
       default_joint_pos: 0.0
       action_scale: 0.117555
       clip: 336
+      q_min: -0.35
+      q_max: 1.57
     right_hip_roll_joint:
       stiffness: 714.56
       damping: 45.49
       default_joint_pos: 0.0
       action_scale: 0.117555
       clip: 336
+      q_min: -1.57
+      q_max: 0.35
     waist_yaw_joint:
-      stiffness: 202.13
-      damping: 12.868
+      stiffness: 404.259
+      damping: 25.7359
       default_joint_pos: 0.0
       action_scale: 0.20778
       clip: 336
+      q_min: -3.14
+      q_max: 3.14
     left_hip_yaw_joint:
       stiffness: 714.56
       damping: 45.49
       default_joint_pos: 0.0
       action_scale: 0.117555
       clip: 336
+      q_min: -0.785
+      q_max: 0.785
     right_hip_yaw_joint:
       stiffness: 714.56
       damping: 45.49
       default_joint_pos: 0.0
       action_scale: 0.117555
       clip: 336
+      q_min: -0.785
+      q_max: 0.785
     left_shoulder_pitch_joint:
       stiffness: 202.13
       damping: 12.868
       default_joint_pos: 0.0
       action_scale: 0.4156
       clip: 336
+      q_min: -3.14
+      q_max: 1.57
     right_shoulder_pitch_joint:
       stiffness: 202.13
       damping: 12.868
       default_joint_pos: 0.0
       action_scale: 0.4156
       clip: 336
+      q_min: -3.14
+      q_max: 1.57
     left_knee_joint:
       stiffness: 202.13
       damping: 12.868
       default_joint_pos: 0.0
       action_scale: 0.423
       clip: 342
+      q_min: 0
+      q_max: 1.57
     right_knee_joint:
       stiffness: 202.13
       damping: 12.868
       default_joint_pos: 0.0
       action_scale: 0.423
       clip: 342
+      q_min: 0
+      q_max: 1.57
     left_shoulder_roll_joint:
       stiffness: 202.13
       damping: 12.868
       default_joint_pos: 0.0
       action_scale: 0.4156
       clip: 336
+      q_min: -0.13
+      q_max: 1.57
     right_shoulder_roll_joint:
       stiffness: 202.13
       damping: 12.868
       default_joint_pos: 0.0
       action_scale: 0.4156
       clip: 336
+      q_min: -1.57
+      q_max: 0.13
     left_ankle_pitch_joint:
       stiffness: 202.13
       damping: 12.868
       default_joint_pos: 0.0
       action_scale: 0.423
       clip: 342
+      q_min: -0.3
+      q_max: 1.05
     right_ankle_pitch_joint:
       stiffness: 202.13
       damping: 12.868
       default_joint_pos: 0.0
       action_scale: 0.423
       clip: 342
+      q_min: -0.3
+      q_max: 1.05
     left_elbow_joint:
       stiffness: 142.1223
       damping: 9.0478
       default_joint_pos: 0.0
       action_scale: 0.29323
       clip: 136
+      q_min: -2.62
+      q_max: 0
     right_elbow_joint:
       stiffness: 142.1223
       damping: 9.0478
       default_joint_pos: 0.0
       action_scale: 0.2932
       clip: 136
+      q_min: -2.62
+      q_max: 0
     left_ankle_roll_joint:
       stiffness: 18.6338
       damping: 1.186
       default_joint_pos: 0.0
       action_scale: 0.4427
       clip: 33
+      q_min: -0.26
+      q_max: 0.26
     right_ankle_roll_joint:
       stiffness: 18.6338
       damping: 1.186
       default_joint_pos: 0.0
       action_scale: 0.4427
       clip: 33
+      q_min: -0.26
+      q_max: 0.26

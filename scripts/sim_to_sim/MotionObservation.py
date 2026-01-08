@@ -33,8 +33,15 @@ class MotionObservationTerm:
                 motion_q = torch.tensor(motion_anchor_quat_w, dtype=torch.float32)
 
             ori = quat_mul(quat_inv(robot_q), motion_q)
+            # print("ori:", ori)
+            # print("quat_inv(robot_q):", quat_inv(robot_q))
+            # print("motion_q:", motion_q)
+            # print("ori:", ori)
 
         mat = matrix_from_quat(ori)
+
+        # print("mat:", mat)
+
 
         # matrix_from_quat may return (N,3,3) for batched input or (3,3) for single
         if mat.ndim == 3:

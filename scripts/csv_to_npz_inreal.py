@@ -291,6 +291,9 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joi
         joint_vel = robot.data.default_joint_vel.clone()
         joint_pos[:, robot_joint_indexes] = motion_dof_pos
         joint_vel[:, robot_joint_indexes] = motion_dof_vel
+
+        print("xml motion joint: ", motion_dof_pos[0])
+        print("urdf motion joint: ", joint_pos[0])
         robot.write_joint_state_to_sim(joint_pos, joint_vel)
         sim.render()  # We don't want physic (sim.step())
         scene.update(sim.get_physics_dt())

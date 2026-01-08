@@ -42,6 +42,7 @@ import gymnasium as gym
 import os
 import pathlib
 import torch
+import numpy as np
 
 from rsl_rl.runners import OnPolicyRunner
 
@@ -129,10 +130,16 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                         pass
     # disable observation noise
     for obs_group in [env_cfg.observations.policy, env_cfg.observations.critic]:
-        for obs_term in obs_group.to_dict().values():
-            if hasattr(obs_term, "noise"):
+        for obs_term_name, obs_term in obs_group.__dict__.items():
+            if obs_term is not None and hasattr(obs_term, "noise"):
                 obs_term.noise = None
+                print(f"[INFO] Disabled noise for observation term: {obs_term_name}")
     print("[INFO] Disabled randomization, noise, and disturbance forces for play mode.")
+
+    # Enable test mode for motion command (always start from time_steps=0 without random sampling)
+    if hasattr(env_cfg, "commands") and hasattr(env_cfg.commands, "motion"):
+        env_cfg.commands.motion.is_test_mode = True
+        print("[INFO] Enabled test mode for motion command.")
 
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
@@ -177,8 +184,50 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     )
     attach_onnx_metadata(env.unwrapped, args_cli.wandb_path if args_cli.wandb_path else "none", export_model_dir)
     # reset environment
-    obs, _ = env.get_observations()
+    robot = env.unwrapped.scene["robot"]
+    # Ensure initial joint positions and velocities are zero for clean controller tests
+    try:
+        with torch.no_grad():
+            if hasattr(robot.data, "joint_pos"):
+                robot.data.joint_pos[:] = torch.zeros_like(robot.data.joint_pos)
+            if hasattr(robot.data, "joint_vel"):
+                robot.data.joint_vel[:] = torch.zeros_like(robot.data.joint_vel)
+    except Exception:
+        pass
+
+    joint_pos = robot.data.joint_pos
+    body_pos_w = robot.data.body_pos_w
+    print(f"Robot init joint_pos: {joint_pos[0].cpu().numpy()}")
+    if hasattr(robot.data, "joint_vel"):
+        print(f"Robot init joint_vel: {robot.data.joint_vel[0].cpu().numpy()}")
+    
     timestep = 0
+
+    root_pos = robot.data.body_pos_w[0, 0].cpu().numpy()    # (x, y, z)
+    root_quat = robot.data.body_quat_w[0, 0].cpu().numpy()  # (w, x, y, z)
+
+    print("root_pos:", root_pos)
+    print("root_quat (w,x,y,z):", root_quat)
+
+    # Print runtime joint name list and index mapping (helps map obs/actions -> joint names)
+    try:
+        joint_names = None
+        if hasattr(robot, "joint_names"):
+            joint_names = list(robot.joint_names)
+        elif hasattr(robot, "get_joint_name"):
+            joint_names = list(robot.get_joint_name())
+        elif hasattr(robot.data, "joint_pos"):
+            # fallback: create generic names if none available
+            joint_names = [f"joint_{i}" for i in range(robot.data.joint_pos.shape[-1])]
+
+        if joint_names is not None:
+            print("Runtime joint order (index: name):")
+            for i, name in enumerate(joint_names):
+                print(f"{i}: {name}")
+    except Exception:
+        pass
+
+    obs, _ = env.get_observations()
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
@@ -188,17 +237,22 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 robot = env.unwrapped.scene["robot"]
                 joint_pos = robot.data.joint_pos  # shape: (num_envs, num_joints)
                 joint_vel = robot.data.joint_vel  # shape: (num_envs, num_joints)
+                joint_vel = robot.data.joint_vel  # shape: (num_envs, num_joints)
                 
                 # print for first environment only to avoid clutter
                 # 从底层环境中获取 MotionCommand 对象（使用 unwrapped 访问底层环境）
                 motion_command = env.unwrapped.command_manager.get_term("motion")
 
                 # 获取当前的时间步
-                if timestep == 0:  # print every 50 steps
-                    print("time_steps: ", motion_command.time_steps)
-                    print("obs: ", obs)
-                    print(f"[Step {timestep}] Robot joint_pos: {joint_pos[0].cpu().numpy()}")
-                    print(f"[Step {timestep}] Robot joint_vel: {joint_vel[0].cpu().numpy()}")
+                if timestep <= 3:  # print initial diagnostics
+                    body_idx = robot.body_names.index("torso_link")
+                    body_quat_env0 = robot.data.body_quat_w[0, body_idx].cpu().numpy()
+                    # print("time_steps: ", motion_command.time_steps)
+                    # print("obs motion: ", obs[0, 0:40])
+                    # print("obs_quat: ", obs[0, 40:49])
+                    # print("robot body quat: ", body_quat_env0)
+                    # print(f"[Step {timestep}] Robot joint_pos: {joint_pos[0].cpu().numpy()}")
+                    # print(f"[Step {timestep}] Robot joint_vel: {joint_vel[0].cpu().numpy()}")
             except Exception:
                 pass
 

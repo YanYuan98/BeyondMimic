@@ -42,7 +42,7 @@ python scripts/replay_npz.py --registry_name=yanyuan98-mirrorme-org/wandb-regist
 - 训练一个控制器
 
 ```bash
-CUDA_VISIBLE_DEVICES=1 python scripts/rsl_rl/train.py --task=Tracking-Flat-Inreal-v0 --registry_name yanyuan98-mirrorme-org/wandb-registry-motions/run_inreal --logger wandb --log_project_name BeyondMimic_Inreal --run_name run_test --headless
+CUDA_VISIBLE_DEVICES=1 python scripts/rsl_rl/train.py --task=Tracking-Flat-Inreal-Wo-State-Estimation-v2 --registry_name yanyuan98-mirrorme-org/wandb-registry-motions/36_09_walk_forward_turn_back --logger wandb --log_project_name BeyondMimic_Inreal_v2 --run_name walk_forward_turn_back --headless
 ```
 `CUDA_VISIBLE_DEVICES=1`表示用第二个显卡训练，程序会自动将其映射为cuda:0
 

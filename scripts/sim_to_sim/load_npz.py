@@ -11,6 +11,7 @@ joint_vel = data["joint_vel"]
 body_lin_vel_w = data["body_lin_vel_w"]
 body_ang_vel_w = data["body_ang_vel_w"]
 
-print("joint_pos", joint_pos[14])
+print("joint_pos", joint_pos[0])
 print("joint_vel", joint_vel.shape)
-print("body_quat_w", body_quat_w.shape)
+print("body_quat_w", body_quat_w[0,0])
+print("body_pos_w", body_pos_w[0,0])

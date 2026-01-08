@@ -43,39 +43,21 @@ class JointOrderConverter:
     def _create_mapping(self):
         """创建URDF和XML之间的索引映射"""
         # 从XML顺序到URDF顺序的映射
-        self.xml_to_urdf_indices = []
+        self.xml_in_urdf_indices = []
         for xml_joint in self.xml_joint_order:
             urdf_idx = self.urdf_joint_order.index(xml_joint)
-            self.xml_to_urdf_indices.append(urdf_idx)
-        
+            self.xml_in_urdf_indices.append(urdf_idx)
+        print("xml_in_urdf_indices: ", self.xml_in_urdf_indices)
+
         # 从URDF顺序到XML顺序的映射
-        self.urdf_to_xml_indices = []
+        self.urdf_in_xml_indices = []
         for urdf_joint in self.urdf_joint_order:
             xml_idx = self.xml_joint_order.index(urdf_joint)
-            self.urdf_to_xml_indices.append(xml_idx)
-        
-        self.xml_to_urdf_indices = np.array(self.xml_to_urdf_indices)
-        self.urdf_to_xml_indices = np.array(self.urdf_to_xml_indices)
-    
-    def xml_to_urdf(self, xml_ordered_data):
-        """
-        将XML顺序(MuJoCo获取的数据)转换为URDF顺序(网络需要的输入)
-        
-        参数:
-            xml_ordered_data: 按XML顺序排列的joint数据(position/velocity等)
-                            shape: (20,) 或 (batch_size, 20)
-        
-        返回:
-            urdf_ordered_data: 按URDF顺序排列的数据
-        """
-        xml_ordered_data = np.array(xml_ordered_data)
-        
-        if xml_ordered_data.ndim == 1:
-            # 单个样本
-            return xml_ordered_data[self.xml_to_urdf_indices]
-        else:
-            # 批量数据
-            return xml_ordered_data[:, self.xml_to_urdf_indices]
+            self.urdf_in_xml_indices.append(xml_idx)
+        print("urdf_in_xml_indices: ", self.urdf_in_xml_indices)
+
+        self.xml_in_urdf_indices = np.array(self.xml_in_urdf_indices)
+        self.urdf_in_xml_indices = np.array(self.urdf_in_xml_indices)
     
     def urdf_to_xml(self, urdf_ordered_data):
         """
@@ -83,7 +65,7 @@ class JointOrderConverter:
         
         参数:
             urdf_ordered_data: 按URDF顺序排列的数据(网络输出的action)
-                             shape: (20,) 或 (batch_size, 20)
+                            shape: (20,) 或 (batch_size, 20)
         
         返回:
             xml_ordered_data: 按XML顺序排列的数据
@@ -92,27 +74,31 @@ class JointOrderConverter:
         
         if urdf_ordered_data.ndim == 1:
             # 单个样本
-            return urdf_ordered_data[self.urdf_to_xml_indices]
+            return urdf_ordered_data[self.xml_in_urdf_indices]
         else:
             # 批量数据
-            return urdf_ordered_data[:, self.urdf_to_xml_indices]
-    
-    def verify_mapping(self):
-        """验证映射是否正确"""
-        print("验证映射关系:")
-        print("-" * 60)
-        for i, urdf_joint in enumerate(self.urdf_joint_order):
-            xml_idx = self.urdf_to_xml_indices[i]
-            xml_joint = self.xml_joint_order[xml_idx]
-            print(f"URDF[{i:2d}] {urdf_joint:30s} -> XML[{xml_idx:2d}] {xml_joint}")
+            return urdf_ordered_data[:, self.xml_in_urdf_indices]
+
+    def xml_to_urdf(self, xml_ordered_data):
+        """
+        将XML顺序(MuJoCo获取的数据)转换为URDF顺序(网络需要的输入)
         
-        # 验证双向映射一致性
-        test_data = np.arange(20)
-        converted = self.urdf_to_xml(test_data)
-        recovered = self.xml_to_urdf(converted)
-        assert np.allclose(test_data, recovered), "映射验证失败!"
-        print("-" * 60)
-        print("✓ 映射验证通过!")
+        参数:
+            xml_ordered_data: 按XML顺序排列的joint数据(position/velocity等)
+                             shape: (20,) 或 (batch_size, 20)
+        
+        返回:
+            urdf_ordered_data: 按URDF顺序排列的数据
+        """
+        xml_ordered_data = np.array(xml_ordered_data)
+        
+        if xml_ordered_data.ndim == 1:
+            # 单个样本
+            return xml_ordered_data[self.urdf_in_xml_indices]
+        else:
+            # 批量数据
+            return xml_ordered_data[:, self.urdf_in_xml_indices]
+
 
 class MuJoCoRobotEnv:
     """MuJoCo机器人仿真环境包装器"""
@@ -148,15 +134,21 @@ class MuJoCoRobotEnv:
         self.body_indexes = self.get_body_index(self.body_names)
         self.robot_anchor_body_index = self.get_body_index([self.anchor_body_name])
         self.motion_anchor_body_index = self.body_names.index(self.anchor_body_name)
-        print("anchor index: ", self.robot_anchor_body_index, self.motion_anchor_body_index)
+        # print("anchor index: ", self.robot_anchor_body_index[0], self.motion_anchor_body_index)
 
         self.converter = JointOrderConverter()
         # self.joint_index = self.get_joint_index()
         self.joint_names = self.get_joint_name()
-        print("关节名称: ", self.joint_names)
+        # print("关节名称: ", self.joint_names)
         self.action_scale = self.get_action_scale()
+        self.action_scale_urdf = self.converter.xml_to_urdf(self.action_scale)
+        # print("关节scale: ", self.action_scale)
+        # print("关节scale_urdf: ", self.action_scale_urdf)
         self.kp, self.kd = self.get_kp_kd()
         self.torque_clip = self.get_torque_clip()
+        self.joint_pos_min, self.joint_pos_max = self.get_joint_pos_clip()
+        # print("关节kp: ", self.kp)
+        # print("关节kd: ", self.kd)
 
         self.default_pos = self.get_default_pos()
         self.default_joint_pos = self.default_pos[7:]
@@ -182,7 +174,10 @@ class MuJoCoRobotEnv:
             index = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, name)
             body_index.append(index)
 
-        return torch.tensor(body_index, dtype=torch.long)
+        for i in range(self.model.nbody):
+            print(self.model.body(i).name)
+
+        return np.array(body_index)
     
     def get_joint_index(self):
         joint_index = []
@@ -233,6 +228,17 @@ class MuJoCoRobotEnv:
 
         return np.asarray(torque_clip)
     
+    def get_joint_pos_clip(self):
+        joint_pos_min = []
+        joint_pos_max = []
+        for name in self.joint_names:
+            if name not in self.cfg["Robot"]["joint"]:
+                raise KeyError(f"Missing joint '{name}' in YAML config")
+            joint_pos_min.append(self.cfg["Robot"]["joint"][name]["q_min"])
+            joint_pos_max.append(self.cfg["Robot"]["joint"][name]["q_max"])
+
+        return np.asarray(joint_pos_min), np.asarray(joint_pos_max)
+
     def get_kp_kd(self):
         kp = []
         kd = []
@@ -247,25 +253,48 @@ class MuJoCoRobotEnv:
     def reset(self) -> np.ndarray:
         """重置环境"""
         mujoco.mj_resetData(self.model, self.data)
-        
-        # 添加小的随机扰动
-        # self.data.qpos[:] = self.default_pos + np.random.randn(len(self.default_pos)) * 0.1
-        self.data.qpos[:] = self.default_pos
-        self.data.qvel[:] = np.random.randn(self.model.nv) * 0.1
-        
-        mujoco.mj_forward(self.model, self.data)
 
         obs_dummy = np.zeros((1, 109), dtype=np.float32)
         action, motion_state = self.get_session_output(obs_dummy)
+        self.last_action = np.zeros(20, dtype=np.float32)
+        self.time_steps = 0
 
-        print("pos: ", self.data.qpos)
-        print("time: ", self.time_steps)
+        # print("pos: ", self.data.qpos)
+        # print("time: ", self.time_steps)
+
+        root_pos = motion_state['body_pos_w'][0,0]
+        root_ori = motion_state['body_quat_w'][0,0]
+        joint_pos = motion_state['joint_pos'][0]
+        reset_joint_pos = self.converter.urdf_to_xml(joint_pos)
+
+        root_lin_vel = motion_state['body_lin_vel_w'][0,0]
+        root_ang_vel = motion_state['body_ang_vel_w'][0,0]
+        joint_vel = motion_state['joint_vel'][0]
+        reset_joint_vel = self.converter.urdf_to_xml(joint_vel)
+
+        qpos = np.concatenate([
+            root_pos,
+            root_ori,
+            reset_joint_pos
+        ], axis=0)
+
+        qvel = np.concatenate([
+            root_lin_vel,
+            root_ang_vel,
+            reset_joint_vel
+        ], axis=0)
+
+        self.data.qpos[:] = qpos
+        self.data.qvel[:] = qvel
+    
+        mujoco.mj_forward(self.model, self.data)
+
+        # print("init qpos", self.data.qpos)
+        # print("init qvel", self.data.qvel)
         
         return self.get_observation(motion_state)
     
     def get_session_output(self, obs):
-        print("input obs: ", obs.shape)
-        print("input time: ", self.time_steps)
         outputs = self.session.run(
             None,
             {
@@ -284,7 +313,6 @@ class MuJoCoRobotEnv:
         action = outputs[0]
 
         return action, motion_state
-        
 
     def get_observation(self, motion_state) -> np.ndarray:
         """构建观测向量
@@ -306,26 +334,26 @@ class MuJoCoRobotEnv:
         command_joint_pos = np.asarray(command_joint_pos, dtype=np.float32)
         command_joint_vel = np.asarray(command_joint_vel, dtype=np.float32)
         command = np.concatenate([command_joint_pos, command_joint_vel], axis=1)
-        # command_joint_pos_urdf = self.converter.xml_to_urdf(command_joint_pos)
-        # command_joint_vel_urdf = self.converter.xml_to_urdf(command_joint_vel)
-        # command = np.concatenate([command_joint_pos_urdf, command_joint_vel_urdf], axis=1)
 
         motion_anchor_ori_b = self.ObsTerm.get_anchor_orientation_obs(motion_anchor_quat_w)
         base_ang_vel = np.asarray(self.ObsTerm.get_base_ang_vel_obs(), dtype=np.float32).reshape(-1)
-        joint_pos = np.asarray(self.ObsTerm.get_joint_pos_obs(), dtype=np.float32).reshape(-1)
-        joint_vel = np.asarray(self.ObsTerm.get_joint_vel_obs(), dtype=np.float32).reshape(-1)
+        joint_pos_xml = np.asarray(self.ObsTerm.get_joint_pos_obs(), dtype=np.float32).reshape(-1)
+        joint_vel_xml = np.asarray(self.ObsTerm.get_joint_vel_obs(), dtype=np.float32).reshape(-1)
         # convert MuJoCo (XML) joint ordering -> URDF (network) ordering for robot state terms
-        joint_pos = self.converter.xml_to_urdf(joint_pos)
-        joint_vel = self.converter.xml_to_urdf(joint_vel)
+        joint_pos = self.converter.xml_to_urdf(joint_pos_xml)
+        joint_vel = self.converter.xml_to_urdf(joint_vel_xml)
 
         last_action = np.asarray(self.ObsTerm.get_last_action_obs(self.last_action), dtype=np.float32).reshape(-1)
-        # print("command_bef: ", command_befx)
-        print("command: ", command)
-        print("motion_anchor_ori_b: ", motion_anchor_ori_b)
-        print("base_ang_vel: ", base_ang_vel)
-        print("joint_pos: ", joint_pos)
-        print("joint_vel: ", joint_vel)
-        print("last_action: ", last_action)
+
+        print("time: ", self.time_steps)
+        # print("motion: ", command)
+        # print("motion_anchor_ori_b: ", motion_anchor_ori_b)
+        # print("base_ang_vel: ", base_ang_vel)
+        # print("joint_pos: ", joint_pos)
+        # print("joint_vel: ", joint_vel)
+        # print("joint_pos_xml: ", joint_pos_xml)
+        # print("joint_vel_xml: ", joint_vel_xml)
+        # print("last_action: ", last_action)
 
         obs_terms = [
             np.asarray(command, dtype=np.float32).reshape(-1),
@@ -342,7 +370,9 @@ class MuJoCoRobotEnv:
         ]
 
         obs = np.concatenate(obs_terms, axis=0)
+        # print("obs: ", obs)
         self.time_steps += 1
+        # self.time_steps = 0
         
         return obs
     
@@ -360,20 +390,27 @@ class MuJoCoRobotEnv:
 
         action_xml = self.converter.urdf_to_xml(action)
         
-        
         # 计算目标关节位置
         target_pos = self.default_joint_pos + action_xml * self.action_scale
+        target_pos = np.clip(
+            target_pos,
+            self.joint_pos_min,
+            self.joint_pos_max
+        )
+
+        print("target_pos: ", target_pos)
         
         # PD控制
         for _ in range(self.decimation):
-            current_pos = self.data.qpos[7:7+self.num_dof]
-            current_vel = self.data.qvel[6:6+self.num_dof]
+            current_pos = self.data.qpos[7:]
+            current_vel = self.data.qvel[6:]
             
             torque = self.kp * (target_pos - current_pos) - self.kd * current_vel
-            
+            torque = np.clip(torque, -self.torque_clip, self.torque_clip)
+            print("torque: ", torque)
+
             # 应用力矩
-            self.data.ctrl[:] = np.clip(torque, -self.torque_clip, 
-                                        self.torque_clip)
+            self.data.ctrl[:] = torque
         
             # 前进仿真
             mujoco.mj_step(self.model, self.data)
@@ -385,7 +422,7 @@ class MuJoCoRobotEnv:
         
         # 简单的终止条件：机器人翻倒
         base_height = self.data.qpos[2]
-        done = base_height < 0.8  # 根据实际机器人调整
+        done = base_height < 1.0  # 根据实际机器人调整
         
         reward = 0.0  # MuJoCo测试不需要奖励
         info = {}
@@ -423,20 +460,10 @@ def main():
     if args.task == "Inreal_v2":
         model_file = "/home/yyy/Documents/Work/Imitation/BeyondMimic/source/" \
         "whole_body_tracking/whole_body_tracking/assets/inreal_v2_description/xml/inreal_v2.xml"
-        # model_file = "/home/yyy/Documents/Work/Imitation/BeyondMimic/source/" \
-        # "whole_body_tracking/whole_body_tracking/assets/inreal_v2_description/urdf/inreal_v2.urdf"
         cfg_file = "/home/yyy/Documents/Work/Imitation/BeyondMimic/scripts/sim_to_sim/default_cfg.yaml"
     
     with open(cfg_file, "r") as f:
         cfg = yaml.safe_load(f)
-
-    print("="*60)
-    print("MuJoCo Sim-to-Sim 测试")
-    print("="*60)
-    print(f"模型文件: {model_file}")
-    print(f"策略文件: {args.policy}")
-    print(f"测试回合: {args.episodes}")
-    print("="*60)
 
     body_names = [
         "pelvis",
@@ -478,7 +505,7 @@ def main():
         # break
         
         while not done and step_count < args.max_steps:
-            time.sleep(0.5)  # 控制频率
+            # time.sleep(0.005)  # 控制频率
             # 推理动作
             obs_tensor = obs.reshape(1, -1).astype(np.float32)
             action, _ = env.get_session_output(obs_tensor)
@@ -498,14 +525,6 @@ def main():
         
         if done:
             print("Episode terminated early (robot fell)")
-    
-    # 统计信息
-    print("\n" + "="*60)
-    print("测试统计")
-    print("="*60)
-    print(f"平均episode长度: {np.mean(episode_lengths):.1f} ± {np.std(episode_lengths):.1f} steps")
-    print(f"成功率: {sum(l >= args.max_steps for l in episode_lengths) / len(episode_lengths) * 100:.1f}%")
-    print("="*60)
 
 
 if __name__ == "__main__":

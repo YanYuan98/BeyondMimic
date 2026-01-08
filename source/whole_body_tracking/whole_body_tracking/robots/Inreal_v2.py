@@ -1,8 +1,9 @@
 import isaaclab.sim as sim_utils
-from isaaclab.actuators import ImplicitActuatorCfg
+from isaaclab.actuators import ImplicitActuatorCfg, IdealPDActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 
 from whole_body_tracking.assets import ASSET_DIR
+from whole_body_tracking.robots.g1 import STIFFNESS_7520_14
 
 ARMATURE_L1 = 0.217
 ARMATURE_L2 = 0.181
@@ -22,6 +23,8 @@ STIFFNESS_L4 = ARMATURE_L4 * NATURAL_FREQ**2
 STIFFNESS_A1 = ARMATURE_A1 * NATURAL_FREQ**2
 STIFFNESS_A2 = ARMATURE_A2 * NATURAL_FREQ**2
 STIFFNESS_W = ARMATURE_W * NATURAL_FREQ**2
+
+print("STIFFNESS_L1: ", STIFFNESS_L1)
 
 DAMPING_L1 = 2.0 * DAMPING_RATIO * ARMATURE_L1 * NATURAL_FREQ
 DAMPING_L2 = 2.0 * DAMPING_RATIO * ARMATURE_L2 * NATURAL_FREQ
@@ -70,7 +73,7 @@ Inreal_V2_CYLINDER_CFG = ArticulationCfg(
     ),
     soft_joint_pos_limit_factor=0.9,
     actuators={
-        "legs": ImplicitActuatorCfg(
+        "legs": IdealPDActuatorCfg(
             joint_names_expr=[
                 ".*_hip_yaw_joint",
                 ".*_hip_roll_joint",
@@ -120,15 +123,15 @@ Inreal_V2_CYLINDER_CFG = ArticulationCfg(
                 ".*_ankle_roll_joint": ARMATURE_L4,
             },
         ),
-        "waist": ImplicitActuatorCfg(
+        "waist": IdealPDActuatorCfg(
             effort_limit_sim=336,
             velocity_limit_sim=12.9,
             joint_names_expr=["waist_yaw_joint", "waist_pitch_joint"],
-            stiffness=2.0 * STIFFNESS_W,
-            damping=2.0 * DAMPING_W,
-            armature=2.0 * ARMATURE_W,
+            stiffness=STIFFNESS_W,
+            damping=DAMPING_W,
+            armature=ARMATURE_W,
         ),
-        "arms": ImplicitActuatorCfg(
+        "arms": IdealPDActuatorCfg(
             joint_names_expr=[
                 ".*_shoulder_pitch_joint",
                 ".*_shoulder_roll_joint",

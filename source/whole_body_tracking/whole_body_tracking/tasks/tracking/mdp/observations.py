@@ -72,7 +72,10 @@ def motion_anchor_pos_b(env: ManagerBasedEnv, command_name: str) -> torch.Tensor
 
 def motion_anchor_ori_b(env: ManagerBasedEnv, command_name: str) -> torch.Tensor:
     command: MotionCommand = env.command_manager.get_term(command_name)
-
+    
+    # print("================ base ori ===============================")
+    # print("motion_anchor_ori_b:", command.anchor_quat_w)
+    # print("robot_anchor_quat_w:", command.robot_anchor_quat_w)
     _, ori = subtract_frame_transforms(
         command.robot_anchor_pos_w,
         command.robot_anchor_quat_w,
@@ -80,4 +83,10 @@ def motion_anchor_ori_b(env: ManagerBasedEnv, command_name: str) -> torch.Tensor
         command.anchor_quat_w,
     )
     mat = matrix_from_quat(ori)
+    # print("mat:", mat[0])
+
+    # mat = mat[..., :2].reshape(mat.shape[0], -1)
+    # print("mat:", mat)
+
+    # return mat
     return mat[..., :2].reshape(mat.shape[0], -1)
