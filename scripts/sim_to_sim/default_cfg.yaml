@@ -36,10 +36,10 @@ Robot:
       q_min: -1.57
       q_max: 1.57
     waist_pitch_joint:
-      stiffness: 404.259
-      damping: 25.7359
+      stiffness: 202.13
+      damping: 12.868
       default_joint_pos: 0.0
-      action_scale: 0.20778
+      action_scale: 0.4156
       clip: 336
       q_min: -1.57
       q_max: 1.57
@@ -60,10 +60,10 @@ Robot:
       q_min: -1.57
       q_max: 0.35
     waist_yaw_joint:
-      stiffness: 404.259
-      damping: 25.7359
+      stiffness: 202.13
+      damping: 12.868
       default_joint_pos: 0.0
-      action_scale: 0.20778
+      action_scale: 0.4156
       clip: 336
       q_min: -3.14
       q_max: 3.14

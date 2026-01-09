@@ -17,12 +17,16 @@ class JointOrderConverter:
     def __init__(self):
         # URDF中的joint顺序(网络输入/输出顺序)
         self.urdf_joint_order = [
-            'left_hip_pitch_joint', 'right_hip_pitch_joint', 'waist_pitch_joint',
-            'left_hip_roll_joint', 'right_hip_roll_joint', 'waist_yaw_joint',
-            'left_hip_yaw_joint', 'right_hip_yaw_joint', 'left_shoulder_pitch_joint',
-            'right_shoulder_pitch_joint', 'left_knee_joint', 'right_knee_joint',
-            'left_shoulder_roll_joint', 'right_shoulder_roll_joint', 'left_ankle_pitch_joint',
-            'right_ankle_pitch_joint', 'left_elbow_joint', 'right_elbow_joint',
+            'left_hip_pitch_joint', 'right_hip_pitch_joint', 
+            'waist_pitch_joint',
+            'left_hip_roll_joint', 'right_hip_roll_joint', 
+            'waist_yaw_joint',
+            'left_hip_yaw_joint', 'right_hip_yaw_joint', 
+            'left_shoulder_pitch_joint', 'right_shoulder_pitch_joint', 
+            'left_knee_joint', 'right_knee_joint',
+            'left_shoulder_roll_joint', 'right_shoulder_roll_joint', 
+            'left_ankle_pitch_joint', 'right_ankle_pitch_joint', 
+            'left_elbow_joint', 'right_elbow_joint',
             'left_ankle_roll_joint', 'right_ankle_roll_joint'
         ]
         
@@ -32,9 +36,9 @@ class JointOrderConverter:
             'left_knee_joint', 'left_ankle_pitch_joint', 'left_ankle_roll_joint',
             'right_hip_pitch_joint', 'right_hip_roll_joint', 'right_hip_yaw_joint',
             'right_knee_joint', 'right_ankle_pitch_joint', 'right_ankle_roll_joint',
-            'waist_pitch_joint', 'waist_yaw_joint', 'left_shoulder_pitch_joint',
-            'left_shoulder_roll_joint', 'left_elbow_joint', 'right_shoulder_pitch_joint',
-            'right_shoulder_roll_joint', 'right_elbow_joint'
+            'waist_pitch_joint', 'waist_yaw_joint', 
+            'left_shoulder_pitch_joint', 'left_shoulder_roll_joint', 'left_elbow_joint',
+            'right_shoulder_pitch_joint', 'right_shoulder_roll_joint', 'right_elbow_joint'
         ]
         
         # 创建索引映射
@@ -47,14 +51,14 @@ class JointOrderConverter:
         for xml_joint in self.xml_joint_order:
             urdf_idx = self.urdf_joint_order.index(xml_joint)
             self.xml_in_urdf_indices.append(urdf_idx)
-        print("xml_in_urdf_indices: ", self.xml_in_urdf_indices)
+        # print("xml_in_urdf_indices: ", self.xml_in_urdf_indices)
 
         # 从URDF顺序到XML顺序的映射
         self.urdf_in_xml_indices = []
         for urdf_joint in self.urdf_joint_order:
             xml_idx = self.xml_joint_order.index(urdf_joint)
             self.urdf_in_xml_indices.append(xml_idx)
-        print("urdf_in_xml_indices: ", self.urdf_in_xml_indices)
+        # print("urdf_in_xml_indices: ", self.urdf_in_xml_indices)
 
         self.xml_in_urdf_indices = np.array(self.xml_in_urdf_indices)
         self.urdf_in_xml_indices = np.array(self.urdf_in_xml_indices)
@@ -142,16 +146,19 @@ class MuJoCoRobotEnv:
         # print("关节名称: ", self.joint_names)
         self.action_scale = self.get_action_scale()
         self.action_scale_urdf = self.converter.xml_to_urdf(self.action_scale)
-        # print("关节scale: ", self.action_scale)
-        # print("关节scale_urdf: ", self.action_scale_urdf)
+        print("关节scale xml: ", self.action_scale)
+        print("关节scale urdf: ", self.action_scale_urdf)
         self.kp, self.kd = self.get_kp_kd()
+        self.kp_urdf = self.converter.xml_to_urdf(self.kp)
         self.torque_clip = self.get_torque_clip()
         self.joint_pos_min, self.joint_pos_max = self.get_joint_pos_clip()
-        # print("关节kp: ", self.kp)
-        # print("关节kd: ", self.kd)
+        print("关节kp xml: ", self.kp)
+        print("关节kp urdf: ", self.kp_urdf)
 
         self.default_pos = self.get_default_pos()
         self.default_joint_pos = self.default_pos[7:]
+        self.default_joint_pos_urdf = self.converter.xml_to_urdf(self.default_joint_pos)
+        print("关节offset urdf: ", self.default_joint_pos_urdf)
 
         self.ObsTerm = ObsTerm(self.robot_anchor_body_index[0], self.default_joint_pos, self.data, self.model)
         
@@ -174,8 +181,8 @@ class MuJoCoRobotEnv:
             index = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, name)
             body_index.append(index)
 
-        for i in range(self.model.nbody):
-            print(self.model.body(i).name)
+        # for i in range(self.model.nbody):
+        #     print(self.model.body(i).name)
 
         return np.array(body_index)
     
@@ -190,12 +197,19 @@ class MuJoCoRobotEnv:
     
     def get_joint_name(self):
         joint_names = []
+        print("njnt: ", self.model.njnt)
         for i in range(self.model.njnt):
+            jnt_type = self.model.jnt_type[i]
             name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_JOINT, i)
-            if name == None or name == "floating_base":
+            if name == None:
+                print("none: ", jnt_type)
                 pass
             else:
                 joint_names.append(name)
+                print(
+                    f"joint_id = {i:02d}, "
+                    f"name = {name:30s}"
+                )
 
         return np.asarray(joint_names)
     
@@ -289,8 +303,10 @@ class MuJoCoRobotEnv:
     
         mujoco.mj_forward(self.model, self.data)
 
-        # print("init qpos", self.data.qpos)
-        # print("init qvel", self.data.qvel)
+        self.time_steps += 1
+
+        print("init qpos", self.data.qpos)
+        print("init qvel", self.data.qvel)
         
         return self.get_observation(motion_state)
     
@@ -328,6 +344,10 @@ class MuJoCoRobotEnv:
         
         # command
         # motion_state outputs are already in the network (URDF) order
+        obs_dummy = np.zeros((1, 109), dtype=np.float32)
+        _, motion_state = self.get_session_output(obs_dummy)
+        print("time: ", self.time_steps)
+
         motion_anchor_quat_w = motion_state["body_quat_w"][0, self.motion_anchor_body_index]
         command_joint_pos, command_joint_vel = self.ObsTerm.get_command_obs(motion_state)
         # ensure command parts are numpy arrays with shape (1, N)
@@ -345,7 +365,7 @@ class MuJoCoRobotEnv:
 
         last_action = np.asarray(self.ObsTerm.get_last_action_obs(self.last_action), dtype=np.float32).reshape(-1)
 
-        print("time: ", self.time_steps)
+        # print("time: ", self.time_steps)
         # print("motion: ", command)
         # print("motion_anchor_ori_b: ", motion_anchor_ori_b)
         # print("base_ang_vel: ", base_ang_vel)
@@ -370,9 +390,6 @@ class MuJoCoRobotEnv:
         ]
 
         obs = np.concatenate(obs_terms, axis=0)
-        # print("obs: ", obs)
-        self.time_steps += 1
-        # self.time_steps = 0
         
         return obs
     
@@ -392,30 +409,42 @@ class MuJoCoRobotEnv:
         
         # 计算目标关节位置
         target_pos = self.default_joint_pos + action_xml * self.action_scale
-        target_pos = np.clip(
-            target_pos,
-            self.joint_pos_min,
-            self.joint_pos_max
-        )
+        # target_pos = np.clip(
+        #     target_pos,
+        #     self.joint_pos_min,
+        #     self.joint_pos_max
+        # )
+        target_pos_urdf = self.converter.xml_to_urdf(target_pos)
 
-        print("target_pos: ", target_pos)
+        print("target_pos: ", target_pos_urdf)
         
         # PD控制
         for _ in range(self.decimation):
             current_pos = self.data.qpos[7:]
             current_vel = self.data.qvel[6:]
             
+            print("*"*60)
+            # print("dt: ", self.model.opt.timestep)
+            # print("sim time: ", self.data.time)
+            # print("current_pos: ", current_pos)
+            print("current_pos urdf: ", self.converter.xml_to_urdf(current_pos))
+            print("current_vel urdf: ", self.converter.xml_to_urdf(current_vel))
             torque = self.kp * (target_pos - current_pos) - self.kd * current_vel
             torque = np.clip(torque, -self.torque_clip, self.torque_clip)
+            torque_urdf = self.converter.xml_to_urdf(torque)
             print("torque: ", torque)
+            print("torque urdf: ", torque_urdf)
 
             # 应用力矩
             self.data.ctrl[:] = torque
         
             # 前进仿真
             mujoco.mj_step(self.model, self.data)
+            mujoco.mj_rnePostConstraint(self.model, self.data)
+
         
         # 获取新观测
+        self.time_steps += 1
         obs_dummy = np.zeros((1, 109), dtype=np.float32)
         _, motion_state = self.get_session_output(obs_dummy)
         obs = self.get_observation(motion_state)
@@ -505,11 +534,27 @@ def main():
         # break
         
         while not done and step_count < args.max_steps:
-            # time.sleep(0.005)  # 控制频率
+            time.sleep(1)  # 控制频率
             # 推理动作
             obs_tensor = obs.reshape(1, -1).astype(np.float32)
+            print(obs_tensor.shape)
+
+            print("="*60)
+            print("time_steps: ", env.time_steps)
+            print("obs motion pos: ", obs[0:20])
+            print("obs motion vel: ", obs[20:40])
+            print("obs_quat: ", obs[40:46])
+            print("obs_ang_vel: ", obs[46:49])
+            print("robot_ang_vel: ", env.data.qvel[3:6])
+            print("obs_joint_pos: ", obs[49:69])
+            print("obs_joint_vel: ", obs[69:89])
+            print("last_action: ", obs[89:109])
+
             action, _ = env.get_session_output(obs_tensor)
             action = action.flatten()
+
+            print("action: ", action)
+            print("="*60)
             
             # 执行动作
             obs, _, done, _ = env.step(action)

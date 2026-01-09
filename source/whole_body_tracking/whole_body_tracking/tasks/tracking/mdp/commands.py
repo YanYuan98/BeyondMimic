@@ -250,7 +250,9 @@ class MotionCommand(CommandTerm):
     def _resample_command(self, env_ids: Sequence[int]):
         if len(env_ids) == 0:
             return
+        # print("time: ", self.time_steps[env_ids])
         self._adaptive_sampling(env_ids)
+        # print("time after reset: ", self.time_steps[env_ids])
 
         root_pos = self.body_pos_w[:, 0].clone()
         root_ori = self.body_quat_w[:, 0].clone()
@@ -280,9 +282,10 @@ class MotionCommand(CommandTerm):
         joint_pos[env_ids] = torch.clip(
             joint_pos[env_ids], soft_joint_pos_limits[:, :, 0], soft_joint_pos_limits[:, :, 1]
         )
-        print("joint_pos: ", joint_pos[0])
-        print("joint_vel: ", joint_vel[0])
-        print("root_pos: ", root_pos[0], root_ori[0])
+        # print("joint_pos: ", joint_pos[0])
+        # print("joint_vel: ", joint_vel[0])
+        # print("root_pos: ", root_pos[env_ids], root_ori[env_ids])
+        # print("root_vel: ", root_lin_vel[env_ids], root_ang_vel[env_ids])
 
         self.robot.write_joint_state_to_sim(joint_pos[env_ids], joint_vel[env_ids], env_ids=env_ids)
         self.robot.write_root_state_to_sim(

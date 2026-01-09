@@ -34,6 +34,7 @@ class MotionObservationTerm:
 
             ori = quat_mul(quat_inv(robot_q), motion_q)
             # print("ori:", ori)
+            # print("robot_q: ", robot_q)
             # print("quat_inv(robot_q):", quat_inv(robot_q))
             # print("motion_q:", motion_q)
             # print("ori:", ori)

@@ -20,6 +20,8 @@ parser.add_argument(
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--motion_file", type=str, default=None, help="Path to the motion file.")
+parser.add_argument("--onnx_flag", type=bool, default=False, help="Use onnx model.")
+parser.add_argument("--onnx_file", type=str, default=None, help="Path to the onnx file.")
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -57,6 +59,8 @@ from isaaclab.utils.dict import print_dict
 from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
+import onnxruntime as ort
+
 
 # Import extensions to set up environment tasks
 import whole_body_tracking.tasks  # noqa: F401
@@ -128,6 +132,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                         setattr(env_cfg.events, _name, None)
                     except Exception:
                         pass
+    
     # disable observation noise
     for obs_group in [env_cfg.observations.policy, env_cfg.observations.critic]:
         for obs_term_name, obs_term in obs_group.__dict__.items():
@@ -208,26 +213,32 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     print("root_pos:", root_pos)
     print("root_quat (w,x,y,z):", root_quat)
+    
+    if args_cli.onnx_flag == True:
+        if args_cli.onnx_file is None:
+            print("[ERROR] onnx_file argument is required when onnx_flag is True.")
+            return
+        print("[Onnx] Using Onnx model as policy model.")
+        onnx_path = args_cli.onnx_file
+        # onnx_path = "/home/yyy/Documents/Work/Imitation/BeyondMimic/logs/rsl_rl/" \
+        # "inreal_v2_flat/2026-01-08_18-18-52_walk_forward_turn_back/" \
+        # "2026-01-08_18-18-52_walk_forward_turn_back.onnx"
+        session = ort.InferenceSession(onnx_path)
+    else:
+        print("[No Onnx] Not Using Onnx model as policy model.")
 
     # Print runtime joint name list and index mapping (helps map obs/actions -> joint names)
     try:
-        joint_names = None
-        if hasattr(robot, "joint_names"):
-            joint_names = list(robot.joint_names)
-        elif hasattr(robot, "get_joint_name"):
-            joint_names = list(robot.get_joint_name())
-        elif hasattr(robot.data, "joint_pos"):
-            # fallback: create generic names if none available
-            joint_names = [f"joint_{i}" for i in range(robot.data.joint_pos.shape[-1])]
-
-        if joint_names is not None:
-            print("Runtime joint order (index: name):")
-            for i, name in enumerate(joint_names):
-                print(f"{i}: {name}")
+        print("Runtime joint order (index: name):")
+        for i, name in enumerate(robot.joint_names):
+            # print(f"{i}: {name}")
+            print(f"joint_id = {i:02d}, joint_name = {name}")
     except Exception:
         pass
 
     obs, _ = env.get_observations()
+    # 从底层环境中获取 MotionCommand 对象（使用 unwrapped 访问底层环境）
+    motion_command = env.unwrapped.command_manager.get_term("motion")
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
@@ -240,16 +251,21 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 joint_vel = robot.data.joint_vel  # shape: (num_envs, num_joints)
                 
                 # print for first environment only to avoid clutter
-                # 从底层环境中获取 MotionCommand 对象（使用 unwrapped 访问底层环境）
-                motion_command = env.unwrapped.command_manager.get_term("motion")
 
                 # 获取当前的时间步
-                if timestep <= 3:  # print initial diagnostics
+                if motion_command.time_steps[0] <= 3:  # print initial diagnostics
                     body_idx = robot.body_names.index("torso_link")
                     body_quat_env0 = robot.data.body_quat_w[0, body_idx].cpu().numpy()
-                    # print("time_steps: ", motion_command.time_steps)
-                    # print("obs motion: ", obs[0, 0:40])
-                    # print("obs_quat: ", obs[0, 40:49])
+                    print("="*60)
+                    print("time_steps: ", motion_command.time_steps)
+                    print("obs motion pos: ", obs[0, 0:20])
+                    print("obs motion vel: ", obs[0, 20:40])
+                    print("obs_quat: ", obs[0, 40:46])
+                    print("obs_ang_vel: ", obs[0, 46:49])
+                    # print("robot_ang_vel: ", robot.data.root_ang_vel_w)
+                    print("obs_joint_pos: ", obs[0, 49:69])
+                    print("obs_joint_vel: ", obs[0, 69:89])
+                    print("last_action: ", obs[0, 89:109])
                     # print("robot body quat: ", body_quat_env0)
                     # print(f"[Step {timestep}] Robot joint_pos: {joint_pos[0].cpu().numpy()}")
                     # print(f"[Step {timestep}] Robot joint_vel: {joint_vel[0].cpu().numpy()}")
@@ -257,9 +273,29 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 pass
 
             # agent stepping
-            actions = policy(obs)
-            # env stepping
+            if args_cli.onnx_flag:
+                time_steps = motion_command.time_steps.float().unsqueeze(1)
+                obs_np = obs.detach().cpu().numpy()
+                time_steps_np = time_steps.detach().cpu().numpy()
+
+                outputs = session.run(
+                    None,
+                    {
+                        "obs": obs_np,
+                        "time_step": time_steps_np
+                    }
+                )
+                actions = outputs[0]
+                actions = torch.from_numpy(actions).float()
+            else:
+                actions = policy(obs)
+
+            if motion_command.time_steps[0] <= 3:
+                print("action: ", actions)
+                print("="*60)           
+
             obs, _, _, _ = env.step(actions)
+
         if args_cli.video:
             timestep += 1
             # Exit the play loop after recording one video
