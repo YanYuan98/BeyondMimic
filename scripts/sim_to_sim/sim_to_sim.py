@@ -409,6 +409,11 @@ class MuJoCoRobotEnv:
         
         # 计算目标关节位置
         target_pos = self.default_joint_pos + action_xml * self.action_scale
+        target_pos = np.array([
+                               -0.2, 0.0, 0.0, 0.4, -0.2, 0.0,
+                               -0.2, 0.0, 0.0, 0.4, -0.2, 0.0,
+                               0.0, 0.0,
+                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         # target_pos = np.clip(
         #     target_pos,
         #     self.joint_pos_min,
@@ -437,10 +442,11 @@ class MuJoCoRobotEnv:
 
             # 应用力矩
             self.data.ctrl[:] = torque
+            print("torque: ", self.data.ctrl[:])
         
             # 前进仿真
             mujoco.mj_step(self.model, self.data)
-            mujoco.mj_rnePostConstraint(self.model, self.data)
+            # mujoco.mj_rnePostConstraint(self.model, self.data)
 
         
         # 获取新观测
@@ -457,14 +463,6 @@ class MuJoCoRobotEnv:
         info = {}
         
         return obs, reward, done, info
-    
-    def render(self):
-        """渲染可视化"""
-        if self.render_mode and self.viewer is None:
-            self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
-        
-        if self.viewer is not None:
-            self.viewer.sync()
 
 
 def main():
@@ -519,25 +517,21 @@ def main():
         body_names=body_names,
         anchor_body_name=anchor_body_name,
     )
+
+    viewer = mujoco.viewer.launch_passive(env.model, env.data)
     
-    # 运行测试
-    render = True
-    episode_lengths = []
-    
-    for episode in range(args.episodes):
-        print(f"\n[Episode {episode+1}/{args.episodes}]")
-        
+    while viewer.is_running():        
         obs = env.reset()
         done = False
         step_count = 0
+        action = np.zeros(env.model.nu)
 
         # break
         
-        while not done and step_count < args.max_steps:
+        while not done and step_count < args.max_steps and viewer.is_running():
             time.sleep(1)  # 控制频率
             # 推理动作
             obs_tensor = obs.reshape(1, -1).astype(np.float32)
-            print(obs_tensor.shape)
 
             print("="*60)
             print("time_steps: ", env.time_steps)
@@ -560,14 +554,9 @@ def main():
             obs, _, done, _ = env.step(action)
             
             # 渲染
-            if render:
-                env.render()
+            viewer.sync()
             
-            step_count += 1
-        
-        episode_lengths.append(step_count)
-        print(f"Episode length: {step_count} steps ({step_count * 0.005:.2f}s)")
-        
+            step_count += 1        
         if done:
             print("Episode terminated early (robot fell)")
 

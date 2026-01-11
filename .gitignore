@@ -40,5 +40,6 @@ _build
 *.zarr
 *.npz
 
-**/assets/
+**/assets/unitree_description
+**/assets/inreal_description
 artifacts/
