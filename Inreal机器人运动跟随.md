@@ -48,7 +48,7 @@ CUDA_VISIBLE_DEVICES=1 python scripts/rsl_rl/train.py --task=Tracking-Flat-Inrea
 
 ### 测试
 
-- 控制器测试
+#### 控制器测试
 
 ```bash
 python scripts/rsl_rl/play.py --task=Tracking-Flat-Inreal-v0 --num_envs=1 --wandb_path=yanyuan98-zhejiang-university/BeyondMimic_Inreal/79hrhdbn (wandb-run-path)
@@ -56,6 +56,12 @@ python scripts/rsl_rl/play.py --task=Tracking-Flat-Inreal-v0 --num_envs=1 --wand
 
 WandB run path 在run overview中。它遵循格式 {your_organization}/{project_name}/ 以及
 具有唯一的 8 字符标识符。请注意，run_name 与 run_path 不同。
+
+#### sim to sim
+在mujoco中测试机器人控制器onnx
+```bash
+python scripts/sim_to_sim/sim_to_sim.py --task Inreal_v2 --policy /home/yyy/Documents/Work/Imitation/BeyondMimic/logs/rsl_rl/inreal_v2_flat/2026-01-08_18-18-52_walk_forward_turn_back/2026-01-08_18-18-52_walk_forward_turn_back.onnx
+```
 
 ## Code Structure
 

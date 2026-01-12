@@ -10,6 +10,7 @@ import mujoco
 import mujoco.viewer
 import onnxruntime as ort
 from MotionObservation import MotionObservationTerm as ObsTerm
+import glfw  # 用于检测键盘输入
 
 class JointOrderConverter:
     """处理URDF和MuJoCo XML之间的joint顺序转换"""
@@ -409,16 +410,11 @@ class MuJoCoRobotEnv:
         
         # 计算目标关节位置
         target_pos = self.default_joint_pos + action_xml * self.action_scale
-        target_pos = np.array([
-                               -0.2, 0.0, 0.0, 0.4, -0.2, 0.0,
-                               -0.2, 0.0, 0.0, 0.4, -0.2, 0.0,
-                               0.0, 0.0,
-                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-        # target_pos = np.clip(
-        #     target_pos,
-        #     self.joint_pos_min,
-        #     self.joint_pos_max
-        # )
+        target_pos = np.clip(
+            target_pos,
+            self.joint_pos_min,
+            self.joint_pos_max
+        )
         target_pos_urdf = self.converter.xml_to_urdf(target_pos)
 
         print("target_pos: ", target_pos_urdf)
@@ -519,8 +515,9 @@ def main():
     )
 
     viewer = mujoco.viewer.launch_passive(env.model, env.data)
+    should_exit = False
     
-    while viewer.is_running():        
+    while viewer.is_running() and not should_exit:        
         obs = env.reset()
         done = False
         step_count = 0
@@ -528,8 +525,9 @@ def main():
 
         # break
         
-        while not done and step_count < args.max_steps and viewer.is_running():
+        while not done and step_count < args.max_steps and viewer.is_running() and not should_exit:
             time.sleep(1)  # 控制频率
+            
             # 推理动作
             obs_tensor = obs.reshape(1, -1).astype(np.float32)
 

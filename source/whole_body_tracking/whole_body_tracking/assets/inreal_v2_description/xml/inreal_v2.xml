@@ -1,5 +1,6 @@
 <mujoco model="InRealV2">
   <compiler angle="radian" meshdir="../mesh/"/>
+  <option timestep="0.005"/>
 
   <asset>
     <mesh name="R" content_type="model/stl" file="R.stl"/>
@@ -48,7 +49,14 @@
 
   <worldbody>
     <geom name="floor" size="100 100 0.01" type="box" material="groundplane" contype="1" conaffinity="1" priority="1"
-      friction="0.6" condim="3"/>
+      friction="1.0 0.001 0.001" condim="3" solimp="0.9 0.95 0.01" solref="0.02 1"/>
+    <!-- 地面接触参数设置:
+         friction="[μ_滑动摩擦 μ_转滚 μ_扭转]" 
+         solimp="[impratio 摩擦损失 阻尼]"  
+         solref="[时间常数 阻尼比]"
+         可以根据需要调整这些值来改变机器人与地面的接触特性 -->
+    <!-- solimp 的第一个参数就是恢复系数(coefficient of restitution)
+         典型值: 0.0=完全塑性 ~ 1.0=完全弹性 -->
     <light diffuse=".5 .5 .5" pos="-3 -3 5" dir="3 3 -5" castshadow="true"/>
     <body name="pelvis" pos="0 0 1.12">
       <camera name="follow_pelvis" pos="-1.2 4.0 1.2" euler="0 0 0" mode="track"/>

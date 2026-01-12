@@ -58,16 +58,14 @@ Inreal_V2_CYLINDER_CFG = ArticulationCfg(
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 1.12),
         joint_pos={
-            ".*_hip_pitch_joint": -0.15,
-            ".*_hip_yaw_joint": 0.0,
-            ".*_hip_roll_joint": 0.0,
-            ".*_knee_joint": 0.3,
-            ".*_ankle_pitch_joint": -0.15,
+            ".*_hip_pitch_joint": 0.0,
+            ".*_knee_joint": 0.0,
+            ".*_ankle_pitch_joint": 0.0,
             ".*_ankle_roll_joint": 0.0,
-            ".*_elbow_joint": -0.5,
-            "left_shoulder_roll_joint": 0.2,
+            ".*_elbow_joint": 0.0,
+            "left_shoulder_roll_joint": 0.0,
             "left_shoulder_pitch_joint": 0.0,
-            "right_shoulder_roll_joint": -0.2,
+            "right_shoulder_roll_joint": 0.0,
             "right_shoulder_pitch_joint": 0.0,
         },
         joint_vel={".*": 0.0},
@@ -100,20 +98,20 @@ Inreal_V2_CYLINDER_CFG = ArticulationCfg(
                 ".*_ankle_roll_joint": 34.0,
             },
             stiffness={
-                ".*_hip_pitch_joint": 360,
-                ".*_hip_roll_joint": 300,
-                ".*_hip_yaw_joint": 300,
-                ".*_knee_joint": 240,
-                ".*_ankle_pitch_joint": 160,
-                ".*_ankle_roll_joint": 40,
+                ".*_hip_pitch_joint": STIFFNESS_L1,
+                ".*_hip_roll_joint": STIFFNESS_L2,
+                ".*_hip_yaw_joint": STIFFNESS_L2,
+                ".*_knee_joint": STIFFNESS_L3,
+                ".*_ankle_pitch_joint": STIFFNESS_L3,
+                ".*_ankle_roll_joint": STIFFNESS_L4,
             },
             damping={
-                ".*_hip_pitch_joint": 6.0,
-                ".*_hip_roll_joint": 5.0,
-                ".*_hip_yaw_joint": 5.0,
-                ".*_knee_joint": 5.0,
-                ".*_ankle_pitch_joint": 4.0,
-                ".*_ankle_roll_joint": 1.0,
+                ".*_hip_pitch_joint": DAMPING_L1,
+                ".*_hip_roll_joint": DAMPING_L2,
+                ".*_hip_yaw_joint": DAMPING_L2,
+                ".*_knee_joint": DAMPING_L3,
+                ".*_ankle_pitch_joint": DAMPING_L3,
+                ".*_ankle_roll_joint": DAMPING_L4,
             },
             armature={
                 ".*_hip_pitch_joint": ARMATURE_L1,
@@ -128,8 +126,8 @@ Inreal_V2_CYLINDER_CFG = ArticulationCfg(
             effort_limit_sim=336,
             velocity_limit_sim=12.9,
             joint_names_expr=["waist_yaw_joint", "waist_pitch_joint"],
-            stiffness=300,
-            damping=5.0,
+            stiffness=STIFFNESS_W,
+            damping=DAMPING_W,
             armature=ARMATURE_W,
         ),
         "arms": ImplicitActuatorCfg(
@@ -149,14 +147,14 @@ Inreal_V2_CYLINDER_CFG = ArticulationCfg(
                 ".*_elbow_joint": 27.5,
             },
             stiffness={
-                ".*_shoulder_pitch_joint": 120,
-                ".*_shoulder_roll_joint": 120,
-                ".*_elbow_joint": 80,
+                ".*_shoulder_pitch_joint": STIFFNESS_A1,
+                ".*_shoulder_roll_joint": STIFFNESS_A1,
+                ".*_elbow_joint": STIFFNESS_A2,
             },
             damping={
-                ".*_shoulder_pitch_joint": 3.0,
-                ".*_shoulder_roll_joint": 3.0,
-                ".*_elbow_joint": 2.0,
+                ".*_shoulder_pitch_joint": DAMPING_A1,
+                ".*_shoulder_roll_joint": DAMPING_A1,
+                ".*_elbow_joint": DAMPING_A2,
             },
             armature={
                 ".*_shoulder_pitch_joint": ARMATURE_A1,
@@ -178,7 +176,4 @@ for a in Inreal_V2_CYLINDER_CFG.actuators.values():
         s = {n: s for n in names}
     for n in names:
         if n in e and n in s and s[n]:
-            # Inreal_V2_ACTION_SCALE[n] = 0.25 * e[n] / s[n]
-            Inreal_V2_ACTION_SCALE[n] = 0.25
-
-print("Inreal_V2_ACTION_SCALE:", Inreal_V2_ACTION_SCALE)
+            Inreal_V2_ACTION_SCALE[n] = 0.25 * e[n] / s[n]
