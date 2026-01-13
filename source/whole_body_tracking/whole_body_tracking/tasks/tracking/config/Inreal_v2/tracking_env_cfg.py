@@ -173,7 +173,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
-            "pos_distribution_params": (-0.01, 0.01),
+            "pos_distribution_params": (-0.02, 0.02),
             "operation": "add",
         },
     )
