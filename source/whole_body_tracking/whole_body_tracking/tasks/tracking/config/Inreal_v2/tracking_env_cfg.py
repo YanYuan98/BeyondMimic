@@ -173,7 +173,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
-            "pos_distribution_params": (-0.02, 0.02),
+            "pos_distribution_params": (-0.03, 0.03),
             "operation": "add",
         },
     )
@@ -193,6 +193,18 @@ class EventCfg:
         mode="interval",
         interval_range_s=(1.0, 3.0),
         params={"velocity_range": VELOCITY_RANGE},
+    )
+
+    # joint pd
+    pd_rand = EventTerm(
+        func=mdp.randomize_actuator_gains,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
+            "stiffness_distribution_params": (0.9, 1.1),
+            "damping_distribution_params": (0.8, 1.2),
+            "operation": "scale",
+        },
     )
 
 
@@ -231,6 +243,7 @@ class RewardsCfg:
         params={"command_name": "motion", "std": 3.14},
     )
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-1e-1)
+    action_rate_2nd_l2 = RewTerm(func=mdp.action_rate_2nd_l2, weight=-5e-1)
     joint_limit = RewTerm(
         func=mdp.joint_pos_limits,
         weight=-10.0,

@@ -24,7 +24,7 @@ Robot:
       damping: 6.0
       default_joint_pos: -0.15
       action_scale: 0.25
-      clip: 495
+      clip: 586.85
       q_min: -1.57
       q_max: 1.57
     right_hip_pitch_joint:
@@ -32,7 +32,7 @@ Robot:
       damping: 6.0
       default_joint_pos: -0.15
       action_scale: 0.25
-      clip: 495
+      clip: 586.85
       q_min: -1.57
       q_max: 1.57
     waist_pitch_joint:
@@ -60,11 +60,11 @@ Robot:
       q_min: -1.57
       q_max: 0.35
     waist_yaw_joint:
-      stiffness: 300
-      damping: 5.0
+      stiffness: 200
+      damping: 4.0
       default_joint_pos: 0.0
       action_scale: 0.25
-      clip: 336
+      clip: 140.25
       q_min: -3.14
       q_max: 3.14
     left_hip_yaw_joint:
@@ -104,7 +104,7 @@ Robot:
       damping: 5.0
       default_joint_pos: 0.3
       action_scale: 0.25
-      clip: 342
+      clip: 270
       q_min: 0
       q_max: 1.57
     right_knee_joint:
@@ -112,7 +112,7 @@ Robot:
       damping: 5.0
       default_joint_pos: 0.3
       action_scale: 0.25
-      clip: 342
+      clip: 270
       q_min: 0
       q_max: 1.57
     left_shoulder_roll_joint:
@@ -136,7 +136,7 @@ Robot:
       damping: 4.0
       default_joint_pos: -0.15
       action_scale: 0.25
-      clip: 342
+      clip: 270
       q_min: -0.3
       q_max: 1.05
     right_ankle_pitch_joint:
@@ -144,7 +144,7 @@ Robot:
       damping: 4.0
       default_joint_pos: -0.15
       action_scale: 0.25
-      clip: 342
+      clip: 270
       q_min: -0.3
       q_max: 1.05
     left_elbow_joint:
@@ -152,7 +152,7 @@ Robot:
       damping: 2.0
       default_joint_pos: -0.5
       action_scale: 0.25
-      clip: 136
+      clip: 112.2
       q_min: -2.62
       q_max: 0
     right_elbow_joint:
@@ -160,7 +160,7 @@ Robot:
       damping: 2.0
       default_joint_pos: -0.5
       action_scale: 0.25
-      clip: 136
+      clip: 112.2
       q_min: -2.62
       q_max: 0
     left_ankle_roll_joint:
@@ -168,7 +168,7 @@ Robot:
       damping: 1.0
       default_joint_pos: 0.0
       action_scale: 0.25
-      clip: 33
+      clip: 38.4
       q_min: -0.26
       q_max: 0.26
     right_ankle_roll_joint:
@@ -176,6 +176,6 @@ Robot:
       damping: 1.0
       default_joint_pos: 0.0
       action_scale: 0.25
-      clip: 33
+      clip: 38.4
       q_min: -0.26
       q_max: 0.26

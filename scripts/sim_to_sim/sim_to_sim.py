@@ -60,6 +60,7 @@ def main():
         cfg = cfg,
         body_names=body_names,
         anchor_body_name=anchor_body_name,
+        init_noise = True
     )
 
     viewer = mujoco.viewer.launch_passive(env.model, env.data)

@@ -17,6 +17,7 @@ class MuJoCoRobotEnv:
         anchor_body_name: str,
         render: bool = True,
         dt: float = 0.005,  # 50Hz control frequency
+        init_noise = True,
     ):
         """
         Args:
@@ -33,6 +34,7 @@ class MuJoCoRobotEnv:
         self.decimation = 4
         self.cfg = cfg
         self.time_steps = 0
+        self.init_niose = init_noise
 
         self.body_names = body_names
         self.anchor_body_name = anchor_body_name
@@ -177,18 +179,24 @@ class MuJoCoRobotEnv:
         action, motion_state = self.get_session_output(obs_dummy)
         self.last_action = np.zeros(20, dtype=np.float32)
 
-        # print("pos: ", self.data.qpos)
-        # print("time: ", self.time_steps)
-
         root_pos = np.round(motion_state['body_pos_w'][0,0], 4)
         root_ori = np.round(motion_state['body_quat_w'][0,0], 4)
         joint_pos = np.round(motion_state['joint_pos'][0], 4)
-        reset_joint_pos = self.converter.urdf_to_xml(joint_pos)
 
         root_lin_vel = np.round(motion_state['body_lin_vel_w'][0,0], 4)
         root_ang_vel = np.round(motion_state['body_ang_vel_w'][0,0], 4)
         root_ang_vel = np.array([0.0363, 0.0176, 0.1341])
         joint_vel = np.round(motion_state['joint_vel'][0], 4)
+
+        if self.init_niose:
+            root_pos += np.random.uniform(-0.1,0.1, size=3)
+            # root_ori += np.random.uniform(-0.1,0.1, size=4)
+            root_lin_vel += np.random.uniform(-0.2,0.2, size=3)
+            root_ang_vel += np.random.uniform(-0.15,0.15, size=3)
+            joint_pos += np.random.uniform(-0.1,0.1, size=20)
+            joint_vel += np.random.uniform(-0.2,0.2, size=20)
+
+        reset_joint_pos = self.converter.urdf_to_xml(joint_pos)
         reset_joint_vel = self.converter.urdf_to_xml(joint_vel)
 
         qpos = np.concatenate([
@@ -203,6 +211,7 @@ class MuJoCoRobotEnv:
             reset_joint_vel
         ], axis=0)
 
+        print("noise qpos: ", qpos)
         self.data.qpos[:] = qpos
         self.data.qvel[:] = qvel
     
@@ -251,7 +260,6 @@ class MuJoCoRobotEnv:
         # motion_state outputs are already in the network (URDF) order
         obs_dummy = np.zeros((1, 109), dtype=np.float32)
         _, motion_state = self.get_session_output(obs_dummy)
-        print("time: ", self.time_steps)
 
         motion_anchor_quat_w = motion_state["body_quat_w"][0, self.motion_anchor_body_index]
         command_joint_pos, command_joint_vel = self.ObsTerm.get_command_obs(motion_state)
@@ -321,28 +329,29 @@ class MuJoCoRobotEnv:
         )
         target_pos_urdf = self.converter.xml_to_urdf(target_pos)
 
-        print("target_pos: ", target_pos_urdf)
+        # print("target_pos: ", target_pos_urdf)
+        # print("sim time: ", self.data.time)
         
         # PD控制
         for _ in range(self.decimation):
             current_pos = self.data.qpos[7:]
             current_vel = self.data.qvel[6:]
             
-            print("*"*60)
+            # print("*"*60)
             # print("dt: ", self.model.opt.timestep)
             # print("sim time: ", self.data.time)
             # print("current_pos: ", current_pos)
-            print("current_pos urdf: ", self.converter.xml_to_urdf(current_pos))
-            print("current_vel urdf: ", self.converter.xml_to_urdf(current_vel))
+            # print("current_pos urdf: ", self.converter.xml_to_urdf(current_pos))
+            # print("current_vel urdf: ", self.converter.xml_to_urdf(current_vel))
             torque = self.kp * (target_pos - current_pos) - self.kd * current_vel
             torque = np.clip(torque, -self.torque_clip, self.torque_clip)
             torque_urdf = self.converter.xml_to_urdf(torque)
-            print("torque: ", torque)
-            print("torque urdf: ", torque_urdf)
+            # print("torque: ", torque)
+            # print("torque urdf: ", torque_urdf)
 
             # 应用力矩
             self.data.ctrl[:] = torque
-            print("torque: ", self.data.ctrl[:])
+            # print("torque: ", self.data.ctrl[:])
         
             # 前进仿真
             mujoco.mj_step(self.model, self.data)

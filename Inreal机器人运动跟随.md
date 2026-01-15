@@ -2,6 +2,9 @@
 本代码是基于BeyondMimic方法,基于GMR重定向的运动数据实现Inreal机器人运动跟踪
 BeyondMimic仓库连接: [motion_tracking_controller](https://github.com/HybridRobotics/motion_tracking_controller).
 
+## 代码架构
+
+
 ## 安装
 - 安装 Isaac Lab v2.1.0 教程: [installation guide](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html).
 - 下载仓库并安装
@@ -47,15 +50,13 @@ CUDA_VISIBLE_DEVICES=1 python scripts/rsl_rl/train.py --task=Tracking-Flat-Inrea
 `CUDA_VISIBLE_DEVICES=1`表示用第二个显卡训练，程序会自动将其映射为cuda:0
 
 ### 测试
-
 #### 控制器测试
-
 ```bash
-python scripts/rsl_rl/play.py --task=Tracking-Flat-Inreal-v0 --num_envs=1 --wandb_path=yanyuan98-zhejiang-university/BeyondMimic_Inreal/79hrhdbn (wandb-run-path)
+python scripts/rsl_rl/play.py --task=Tracking-Flat-Inreal-v0 --num_envs=1 --wandb_path=yanyuan98-zhejiang-university/BeyondMimic_Inreal/79hrhdbn --onnx_flag True --onnx_file ./logs/rsl_rl/inreal_v2_flat/2026-01-15_15-57-28_82_08_stageii_mod_final_v_2_1/2026-01-15_15-57-28_82_08_stageii_mod_final_v_2_1.onnx
 ```
-
-WandB run path 在run overview中。它遵循格式 {your_organization}/{project_name}/ 以及
+- WandB run path 在run overview中。它遵循格式 {your_organization}/{project_name}/ 以及
 具有唯一的 8 字符标识符。请注意，run_name 与 run_path 不同。
+- `--onnx_flag`和`--onnx_file`用于测试onnx格式的控制器
 
 #### sim to sim
 在mujoco中测试机器人控制器onnx

@@ -3,35 +3,16 @@ from isaaclab.actuators import ImplicitActuatorCfg, IdealPDActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 
 from whole_body_tracking.assets import ASSET_DIR
-from whole_body_tracking.robots.g1 import STIFFNESS_7520_14
 
-ARMATURE_L1 = 0.217
+ARMATURE_L1 = 0.291
 ARMATURE_L2 = 0.181
-ARMATURE_L3 = 0.0512
-ARMATURE_L4 = 0.00472
-ARMATURE_A1 = ARMATURE_L3
+ARMATURE_L3 = 0.0509
+ARMATURE_L4 = 0.001584
+ARMATURE_A1 = ARMATURE_L2
 ARMATURE_A2 = 0.036
-ARMATURE_W = ARMATURE_L3
+ARMATURE_W_P = ARMATURE_L2
+ARMATURE_W_Y = ARMATURE_A2
 
-NATURAL_FREQ = 10 * 2.0 * 3.1415926535  # 10Hz
-DAMPING_RATIO = 2.0
-
-STIFFNESS_L1 = ARMATURE_L1 * NATURAL_FREQ**2
-STIFFNESS_L2 = ARMATURE_L2 * NATURAL_FREQ**2
-STIFFNESS_L3 = ARMATURE_L3 * NATURAL_FREQ**2
-STIFFNESS_L4 = ARMATURE_L4 * NATURAL_FREQ**2
-STIFFNESS_A1 = ARMATURE_A1 * NATURAL_FREQ**2
-STIFFNESS_A2 = ARMATURE_A2 * NATURAL_FREQ**2
-STIFFNESS_W = ARMATURE_W * NATURAL_FREQ**2
-
-
-DAMPING_L1 = 2.0 * DAMPING_RATIO * ARMATURE_L1 * NATURAL_FREQ
-DAMPING_L2 = 2.0 * DAMPING_RATIO * ARMATURE_L2 * NATURAL_FREQ
-DAMPING_L3 = 2.0 * DAMPING_RATIO * ARMATURE_L3 * NATURAL_FREQ
-DAMPING_L4 = 2.0 * DAMPING_RATIO * ARMATURE_L4 * NATURAL_FREQ
-DAMPING_A1 = 2.0 * DAMPING_RATIO * ARMATURE_A1 * NATURAL_FREQ
-DAMPING_A2 = 2.0 * DAMPING_RATIO * ARMATURE_A2 * NATURAL_FREQ
-DAMPING_W = 2.0 * DAMPING_RATIO * ARMATURE_W * NATURAL_FREQ
 
 Inreal_V2_CYLINDER_CFG = ArticulationCfg(
     spawn=sim_utils.UrdfFileCfg(
@@ -84,20 +65,20 @@ Inreal_V2_CYLINDER_CFG = ArticulationCfg(
                 ".*_ankle_roll_joint",
             ],
             effort_limit_sim={
-                ".*_hip_pitch_joint": 495.0,
+                ".*_hip_pitch_joint": 586.85,
                 ".*_hip_yaw_joint": 336.0,
                 ".*_hip_roll_joint": 336.0,
-                ".*_knee_joint": 342.0,
-                ".*_ankle_pitch_joint": 342.0,
-                ".*_ankle_roll_joint": 33.0,
+                ".*_knee_joint": 270.0,
+                ".*_ankle_pitch_joint": 270.0,
+                ".*_ankle_roll_joint": 38.4,
             },
             velocity_limit_sim={
-                ".*_hip_pitch_joint": 15.6,
+                ".*_hip_pitch_joint": 13.12,
                 ".*_hip_yaw_joint": 12.9,
                 ".*_hip_roll_joint": 12.9,
-                ".*_knee_joint": 24.4,
-                ".*_ankle_pitch_joint": 24.4,
-                ".*_ankle_roll_joint": 34.0,
+                ".*_knee_joint": 26.4,
+                ".*_ankle_pitch_joint": 26.4,
+                ".*_ankle_roll_joint": 40.75,
             },
             stiffness={
                 ".*_hip_pitch_joint": 360,
@@ -125,12 +106,29 @@ Inreal_V2_CYLINDER_CFG = ArticulationCfg(
             },
         ),
         "waist": ImplicitActuatorCfg(
-            effort_limit_sim=336,
-            velocity_limit_sim=12.9,
-            joint_names_expr=["waist_yaw_joint", "waist_pitch_joint"],
-            stiffness=300,
-            damping=5.0,
-            armature=ARMATURE_W,
+            joint_names_expr=[
+                "waist_yaw_joint", 
+                "waist_pitch_joint"
+                ],
+            effort_limit_sim={
+                "waist_yaw_joint": 140.25, 
+                "waist_pitch_joint": 336,
+                },
+            velocity_limit_sim={
+                "waist_yaw_joint": 26.82, 
+                "waist_pitch_joint": 12.875,
+                },
+            stiffness={
+                "waist_yaw_joint": 200, 
+                "waist_pitch_joint": 300,
+                },
+            damping={
+                "waist_yaw_joint": 4.0, 
+                "waist_pitch_joint": 5.0,
+                },
+            armature={"waist_yaw_joint": ARMATURE_W_Y, 
+                      "waist_pitch_joint": ARMATURE_W_P,
+                },
         ),
         "arms": ImplicitActuatorCfg(
             joint_names_expr=[
@@ -141,12 +139,12 @@ Inreal_V2_CYLINDER_CFG = ArticulationCfg(
             effort_limit_sim={
                 ".*_shoulder_pitch_joint": 336.0,
                 ".*_shoulder_roll_joint": 336.0,
-                ".*_elbow_joint": 136.0,
+                ".*_elbow_joint": 112.2,
             },
             velocity_limit_sim={
                 ".*_shoulder_pitch_joint": 12.9,
                 ".*_shoulder_roll_joint": 12.9,
-                ".*_elbow_joint": 27.5,
+                ".*_elbow_joint": 33.765,
             },
             stiffness={
                 ".*_shoulder_pitch_joint": 120,
