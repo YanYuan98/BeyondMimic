@@ -1,0 +1,35 @@
+<mujoco model="simple_robot">
+  <compiler angle="radian"/>
+
+  <asset>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="1 1 1" rgb2="1 1 1" markrgb="0 0 0"
+      width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0"/>
+  </asset>
+
+  <worldbody>
+    <geom name="floor" size="100 100 0.01" type="box" material="groundplane" contype="1" conaffinity="1" priority="1"
+      friction="1.0 0.001 0.001" condim="3" solimp="0.9 0.95 0.01" solref="0.02 1"/>
+    <light diffuse=".5 .5 .5" pos="-3 -3 5" dir="3 3 -5" castshadow="true"/>
+
+    <!-- 固定基座 -->
+    <body name="base" pos="0 0 0">
+      <!-- <geom type="box" size="0.1 0.1 0.05" group="2"/> -->
+
+      <!-- 旋转连杆 -->
+      <body name="link1" pos="0 0 1.0">
+        <joint name="joint1" pos="0 0 0.0" axis="0 1 0" range="-1.2 1.2"/>
+        <inertial pos="0 0 0.5" mass="1.0" fullinertia="0.02 0.02 0.001 0.0 0.0 0.0"/>
+        <geom type="cylinder" size="0.05 0.5" pos="0 0 0.5" rgba="0.6 0.6 0.6 1.0"/>
+      </body>
+
+    </body>
+
+  </worldbody>
+  
+  <actuator>
+    <motor name="joint1" joint="joint1"/>
+    <!-- <position name="joint1" joint="joint1"/> -->
+  </actuator>
+  
+</mujoco>

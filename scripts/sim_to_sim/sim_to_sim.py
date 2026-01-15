@@ -74,7 +74,7 @@ def main():
         # break
         
         while not done and step_count < args.max_steps and viewer.is_running() and not should_exit:
-            time.sleep(1)  # 控制频率
+            time.sleep(0.01)  # 控制频率
             
             # 推理动作
             obs_tensor = obs.reshape(1, -1).astype(np.float32)

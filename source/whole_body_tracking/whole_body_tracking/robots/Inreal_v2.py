@@ -1,5 +1,5 @@
 import isaaclab.sim as sim_utils
-from isaaclab.actuators import ImplicitActuatorCfg, ImplicitActuatorCfg
+from isaaclab.actuators import ImplicitActuatorCfg, IdealPDActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 
 from whole_body_tracking.assets import ASSET_DIR
@@ -181,4 +181,4 @@ for a in Inreal_V2_CYLINDER_CFG.actuators.values():
             # Inreal_V2_ACTION_SCALE[n] = 0.25 * e[n] / s[n]
             Inreal_V2_ACTION_SCALE[n] = 0.25
 
-print("Inreal_V2_ACTION_SCALE:", Inreal_V2_ACTION_SCALE)
+# print("Inreal_V2_ACTION_SCALE:", Inreal_V2_ACTION_SCALE)

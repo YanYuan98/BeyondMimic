@@ -115,27 +115,21 @@ class MotionLoader:
 
     def _load_motion(self):
         """Loads the motion from the csv file."""
-        if self.frame_range is None:
-            motion = torch.from_numpy(np.loadtxt(self.motion_file, delimiter=","))
-        else:
-            motion = torch.from_numpy(
-                np.loadtxt(
-                    self.motion_file,
-                    delimiter=",",
-                    skiprows=self.frame_range[0] - 1,
-                    max_rows=self.frame_range[1] - self.frame_range[0] + 1,
-                )
-            )
-        motion = motion.to(torch.float32).to(self.device)
-        print("motion data shape: ", motion.shape)
-        self.motion_base_poss_input = motion[:, :3]
-        self.motion_base_rots_input = motion[:, 3:7]
-        self.motion_base_rots_input = self.motion_base_rots_input[:, [3, 0, 1, 2]]  # convert to wxyz
-        self.motion_dof_poss_input = motion[:, 7:]
+        motion = np.load(self.motion_file)
+        print(motion.files)
+        joint_pos = motion['joint_pos']
+        base_pos_w = motion['base_pos_w']
+        base_quat_w = motion['base_quat_w']
+        # motion = motion.to(torch.float32).to(self.device)
+        # print("motion data shape: ", motion.shape)
+        self.motion_base_poss_input = torch.from_numpy(base_pos_w).to(dtype=torch.float32, device=self.device)
+        self.motion_base_rots_input = torch.from_numpy(base_quat_w).to(dtype=torch.float32, device=self.device)
+        self.motion_dof_poss_input = torch.from_numpy(joint_pos).to(dtype=torch.float32, device=self.device)
 
-        self.input_frames = motion.shape[0]
+        self.input_frames = int(self.motion_base_poss_input.shape[0])
         self.duration = (self.input_frames - 1) * self.input_dt
-        print(type(self.motion_base_poss_input), self.motion_base_poss_input.shape)
+        self.duration = float(self.duration)
+        print(type(self.motion_base_poss_input), self.motion_base_poss_input.shape, self.motion_dof_poss_input.shape)
         print(type(self.duration), type(self.input_frames))
         print(f"Motion loaded ({self.motion_file}), duration: {self.duration} sec, frames: {self.input_frames}")
 
@@ -374,26 +368,17 @@ def main():
         sim,
         scene,
         joint_names=[
-            "left_hip_pitch_joint",
-            "left_hip_roll_joint",
-            "left_hip_yaw_joint",
-            "left_knee_joint",
-            "left_ankle_pitch_joint",
-            "left_ankle_roll_joint",
-            "right_hip_pitch_joint",
-            "right_hip_roll_joint",
-            "right_hip_yaw_joint",
-            "right_knee_joint",
-            "right_ankle_pitch_joint",
-            "right_ankle_roll_joint",
-            "waist_pitch_joint",
-            "waist_yaw_joint",
-            "left_shoulder_pitch_joint",
-            "left_shoulder_roll_joint",
-            "left_elbow_joint",
-            "right_shoulder_pitch_joint",
-            "right_shoulder_roll_joint",
-            "right_elbow_joint",
+            'left_hip_pitch_joint', 'right_hip_pitch_joint', 
+            'waist_pitch_joint',
+            'left_hip_roll_joint', 'right_hip_roll_joint', 
+            'waist_yaw_joint',
+            'left_hip_yaw_joint', 'right_hip_yaw_joint', 
+            'left_shoulder_pitch_joint', 'right_shoulder_pitch_joint', 
+            'left_knee_joint', 'right_knee_joint',
+            'left_shoulder_roll_joint', 'right_shoulder_roll_joint', 
+            'left_ankle_pitch_joint', 'right_ankle_pitch_joint', 
+            'left_elbow_joint', 'right_elbow_joint',
+            'left_ankle_roll_joint', 'right_ankle_roll_joint'
         ],
     )
 

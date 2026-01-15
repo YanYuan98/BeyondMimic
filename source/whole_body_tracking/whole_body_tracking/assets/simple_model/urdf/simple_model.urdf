@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<robot name="simple_robot">
+
+  <!-- 固定基座 -->
+  <link name="world"/>
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 1.0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.1"/>
+      </geometry>
+      <material name="gray">
+        <color rgba="0.6 0.6 0.6 1.0"/>
+      </material>
+    </visual>
+  </link>
+
+  <!-- 旋转连杆 -->
+  <link name="link1">
+    <visual>
+      <origin xyz="0 0 0.5" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="1.0" radius="0.05"/>
+      </geometry>
+      <material name="gray">
+        <color rgba="0.6 0.6 0.6 1.0"/>
+      </material>
+    </visual>
+
+    <inertial>
+      <origin xyz="0 0 0.5" rpy="0 0 0"/>
+      <mass value="1.0"/>
+      <inertia
+        ixx="0.02" ixy="0.0" ixz="0.0"
+        iyy="0.02" iyz="0.0"
+        izz="0.001"/>
+    </inertial>
+  </link>
+
+  <!-- 旋转关节 -->
+  <joint name="world_to_base" type="fixed">
+    <parent link="world"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+  
+  <joint name="joint1" type="revolute">
+    <parent link="base_link"/>
+    <child link="link1"/>
+    <origin xyz="0 0 1" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.2" upper="1.2"/>
+  </joint>
+
+</robot>
