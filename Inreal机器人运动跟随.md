@@ -2,9 +2,6 @@
 本代码是基于BeyondMimic方法,基于GMR重定向的运动数据实现Inreal机器人运动跟踪
 BeyondMimic仓库连接: [motion_tracking_controller](https://github.com/HybridRobotics/motion_tracking_controller).
 
-## 代码架构
-
-
 ## 安装
 - 安装 Isaac Lab v2.1.0 教程: [installation guide](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html).
 - 下载仓库并安装
@@ -52,7 +49,7 @@ CUDA_VISIBLE_DEVICES=1 python scripts/rsl_rl/train.py --task=Tracking-Flat-Inrea
 ### 测试
 #### 控制器测试
 ```bash
-python scripts/rsl_rl/play.py --task=Tracking-Flat-Inreal-v0 --num_envs=1 --wandb_path=yanyuan98-zhejiang-university/BeyondMimic_Inreal/79hrhdbn --onnx_flag True --onnx_file ./logs/rsl_rl/inreal_v2_flat/2026-01-15_15-57-28_82_08_stageii_mod_final_v_2_1/2026-01-15_15-57-28_82_08_stageii_mod_final_v_2_1.onnx
+python scripts/rsl_rl/play.py --task=Tracking-Flat-Inreal-Wo-State-Estimation-v2 --num_envs=1 --wandb_path=yanyuan98-zhejiang-university/BeyondMimic_Inreal/79hrhdbn --onnx_flag True --onnx_file ./logs/rsl_rl/inreal_v2_flat/2026-01-15_15-57-28_82_08_stageii_mod_final_v_2_1/2026-01-15_15-57-28_82_08_stageii_mod_final_v_2_1.onnx
 ```
 - WandB run path 在run overview中。它遵循格式 {your_organization}/{project_name}/ 以及
 具有唯一的 8 字符标识符。请注意，run_name 与 run_path 不同。
@@ -64,41 +61,85 @@ python scripts/rsl_rl/play.py --task=Tracking-Flat-Inreal-v0 --num_envs=1 --wand
 python scripts/sim_to_sim/sim_to_sim.py --task Inreal_v2 --policy /home/yyy/Documents/Work/Imitation/BeyondMimic/logs/rsl_rl/inreal_v2_flat/2026-01-08_18-18-52_walk_forward_turn_back/2026-01-08_18-18-52_walk_forward_turn_back.onnx
 ```
 
-## Code Structure
+## 主要代码
 
-Below is an overview of the code structure for this repository:
+以下是此代码库的与task训练相关代码结构概览:
 
 - **`source/whole_body_tracking/whole_body_tracking/tasks/tracking/mdp`**
-  This directory contains the atomic functions to define the MDP for BeyondMimic. Below is a breakdown of the functions:
+  此目录包含用于定义 BeyondMimic 的 MDP 的原子函数。以下是函数的详细说明:
 
     - **`commands.py`**
-      Command library to compute relevant variables from the reference motion, current robot state, and error
-      computations. This includes pose and velocity error calculation, initial state randomization, and adaptive
-      sampling.
+      用于根据参考运动、当前机器人状态和误差计算相关变量的命令库这包括位姿和速度误差计算、初始状态随机化和自适应采样
 
     - **`rewards.py`**
-      Implements the DeepMimic reward functions and smoothing terms.
+      实现了 DeepMimic 奖励函数和平滑项
 
     - **`events.py`**
-      Implements domain randomization terms.
+      实现域随机化项
 
     - **`observations.py`**
-      Implements observation terms for motion tracking and data collection.
+      实现运动跟踪和数据采集的观测项
 
     - **`terminations.py`**
-      Implements early terminations and timeouts.
+      实现提前终止和超时.
 
 - **`source/whole_body_tracking/whole_body_tracking/tasks/tracking/tracking_env_cfg.py`**
-  Contains the environment (MDP) hyperparameters configuration for the tracking task.
+  包含跟踪任务的环境（MDP）超参数配置.
 
 - **`source/whole_body_tracking/whole_body_tracking/tasks/tracking/config/g1/agents/rsl_rl_ppo_cfg.py`**
-  Contains the PPO hyperparameters for the  tracking task.
+  包含跟踪任务的 PPO 超参数.
 
 - **`source/whole_body_tracking/whole_body_tracking/robots`**
-  Contains robot-specific settings, including armature parameters, joint stiffness/damping calculation, and action scale
-  calculation.
+  包含机器人特定设置，包括骨架参数、关节刚度/阻尼计算和动作比例计算.
 
 - **`scripts`**
-  Includes utility scripts for preprocessing motion data, training policies, and evaluating trained policies.
+  包含用于预处理运动数据、训练策略和评估已训练策略的实用脚本。
+  
 
-This structure is designed to ensure modularity and ease of navigation for developers expanding the project.
+## 代码架构
+### 训练代码
+`scripts/rsl_rl/train.py`中定义训练代码
+- task注册：`whole_body_tracking/tasks/Inreal_v2/__init__.py`：通过gym.register中注册了不同task对应的RL env、env_cfg、agent_cfg
+- 任务选择：`train.py`中通过`@hydra_task_config(args_cli.task, "rsl_rl_cfg_entry_point")`动态选择不同的训练任务及其对应的cfg文件
+- 环境创建：`env = gym.make(args_cli.task ...)`， make中基于--task的id通过`entry_point`，基于`isaaclab.envs:ManagerBasedRLEnv`创建训练环境
+- 算法定义：`runner = OnPolicyRunner(env, agent_cfg.to_dict() ...)`基于rsl_rl库定义rl训练算法
+
+### 运动控制代码
+`whole_body_tracking/tasks/`中包含任务任务相关程序
+- `./config/`中包含机器人训练用到的所有配置文件
+  - 环境参数（缩进表示继承关系）: 
+    - `flat_env_cfg.py`: 定义多个env_cfg类接口，如不同控制频率，状态变量是否包含身体位置和速度（可硬件部署）等
+      - `Inreal_v2.py`：机器人参数文件，如pd参数，action scale系数，关节力矩、速度限制、转动惯量等
+      - `tracking_env_cfg.py`：训练相关参数，如对环境基类scene，仿真基类sim设置参数；定义observations，actions，rewards等函数和参数
+        - `ManagerBasedRLEnvCfg`：ManagerBased的RL相关的cfg基类定义，如observations，curriculum，rewards等的类型注解
+          - `ManagerBasedEnvCfg`：ManagerBased的Env相关的cfg基类定义，如viewer，sim，scene等的类型注解
+  - 算法参数（缩进表示继承关系）: 
+    - `rsl_rl_ppo_cfg.py`: 网络大小和算法参数定义
+      - `RslRlOnPolicyRunnerCfg`：算法参数基；类
+
+`tracking_env_cfg.py`对象详解：
+- `scene`：场景，`InteractiveSceneCfg`类型，并在`manager_based_env.py/__init__`通过`InteractiveScene(self.cfg.scene)`基于此cfg实例化scene
+  - `InteractiveScene`：设置地形terrain、关节机器人articulations，可变形体deformable、刚体rigid、传感器sensors等场景元素
+    - `Articulation`：在`InteractiveScene`根据`tracking_env_cfg.py`中的robot类型实例化，用以获取与机器人actuator（actuator_pd.idealpdactuator等）、joint_data、root、body等相关的所有数据，以及通过`wrie_*`相关函数从sim中获取最新状态，或者将最新数据写入sim。
+- `command`：指令，`MotionCommandCfg`类型，并在`manager_based_env.py/__init__`实例化，在`mdp/command.py`中定义motion data的指令数据类型、command更新和自适应采样策略。
+- `action`：动作，`ActionsCfg`类型，设置action类型以及相应的scale和offset等参数，`JointPositionAction`表示action代表关节目标位置，可通过`process_actions`和`apply_actions`等函数从网络输出action计算关节目标位置，并将其写入`Articulation`中
+- `Observations`：观测量，`ObservationsCfg`类型，在`observation.py`中定义观测量获取函数，并在`managers/observation_manager.py`中在调用时compute所有观测量
+- `event`：扰动事件，`EventCfg`类型，在`events.py`中定义扰动施加函数，并在`managers/event_manager.py`中在调用时compute所有扰动量
+- `reward`：奖励函数，`RewardsCfg`类型，在`reward.py`中定义奖励函数计算，并在`managers/reward_manager.py`中在调用时compute所有reward
+- `terminations`：终止条件，`TerminationsCfg`类型，在`terminations.py`中定义终止条件，并在`managers/termination_manager.py`中在调用时compute所有终止条件
+
+
+### 训练环境
+训练环境在isaaclab库中的`source/isaaclab/isaaclab/`中定义
+- Env：`envs/manager_based_rl_env.py`
+  - `__init__`：scene创建；加载cfg文件；调用`managers/`中函数定义observations，actions，rewards，events等manager，定义状态和动作空间
+  - `step`：
+    - action映射：通过self.`action_manager.process_action(action)`调用`ActionsCfg`定义的action的joint_action类型(如`JointPositionAction`)，基于该类型的`process_action`函数将action映射到target_pos
+    - 设置关节目标位置或者力矩：调用`self.action_manager.apply_action`->`joint_action.apply_action`->`articulation.set_joint_position_target`函数设置各关节的目标位置或者力矩
+    - 写入sim仿真：`self.scene.write_data_to_sim`->`articulation.write_data_to_sim`将上一步设置的目标位置写入仿真data中用内置pd控制器控制，或者通过idealpdactuator显示计算力矩
+    - simulate：`self.sim.step`
+    - 计算termination环境
+    - 计算reward
+    - 计算observation
+    - reset终止的环境
+  - `_reset_idx`：父类的reset函数调用`reset_idx`重置环境
