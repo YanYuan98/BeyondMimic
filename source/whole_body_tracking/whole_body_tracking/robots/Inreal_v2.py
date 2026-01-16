@@ -178,5 +178,3 @@ for a in Inreal_V2_CYLINDER_CFG.actuators.values():
         if n in e and n in s and s[n]:
             # Inreal_V2_ACTION_SCALE[n] = 0.25 * e[n] / s[n]
             Inreal_V2_ACTION_SCALE[n] = 0.25
-
-# print("Inreal_V2_ACTION_SCALE:", Inreal_V2_ACTION_SCALE)

@@ -52,6 +52,28 @@ CUDA_VISIBLE_DEVICES=1 python scripts/rsl_rl/train.py --task=Tracking-Flat-Inrea
 1. 通过GMR重映射后的动作，其运动轨迹光滑性显著影响控制器表现效果和sim-to-sim效果，因此可通过[robot-motion-editor](https://github.com/project-instinct/robot-motion-editor)编辑器对机器人轨迹进行光滑处理
 2. beyondmimic自带的基于固有频率的pd参数计算方法会导致kp和kd项过大，不利于sim-to-sim和实物部署，建议重新设置
 
+#### 小bug:
+1. 机器人由于触发termination条件提前终止reset_idx时,与另外两种reset情况:达到轨终点和环境init reset,其obs 中的motion.joint_pos等观测量时间戳不一致问题:
+  - 解决方法: 在`command.py/_updata_command()`函数中增加引入重置掩码区别两种不同reset情况
+  ```python
+  # 注释原有代码
+  # self.time_steps += 1
+
+  # 1. 获取当前需要手动重置的环境（由 termination_manager 产生）
+  # 注意：在 step 函数中，reset_idx 运行后，这些环境应该是刚刚重置完的
+  manual_reset_ids = self._env.reset_buf.nonzero(as_tuple=False).squeeze(-1)
+
+  # 2. 只有非手动重置的环境才执行自增
+  # 创建一个掩码，排除掉本轮刚手动重置的环境
+  update_ids = torch.ones(self.num_envs, dtype=torch.bool, device=self.device)
+  update_ids[manual_reset_ids] = False
+  
+  # 仅对正常运行的环境增加时间步
+  self.time_steps[update_ids] += 1
+  env_ids = torch.where(self.time_steps >= self.motion.time_step_total)[0]
+  self._resample_command(env_ids)
+  ```
+
 ### 测试
 #### 控制器测试
 ```bash

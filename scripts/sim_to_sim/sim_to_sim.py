@@ -94,24 +94,24 @@ def main():
             # 推理动作
             obs_tensor = obs.reshape(1, -1).astype(np.float32)
 
-            if env.time_steps <= 3:
-                print("="*60)
-                print("time_steps: ", env.time_steps)
-                print("obs motion pos: ", obs[0:20])
-                print("robot joint pos: ", env.data.qpos[7:])
-                print("obs motion vel: ", obs[20:40])
-                print("obs_quat: ", obs[40:46])
-                print("obs_ang_vel: ", obs[46:49])
-                print("obs_joint_pos: ", obs[49:69])
-                print("obs_joint_vel: ", obs[69:89])
-                print("last_action: ", obs[89:109])
+            # if env.time_steps <= 3:
+            #     print("="*60)
+            #     print("time_steps: ", env.time_steps)
+            #     print("obs motion pos: ", obs[0:20])
+            #     print("robot joint pos: ", env.data.qpos[7:])
+            #     print("obs motion vel: ", obs[20:40])
+            #     print("obs_quat: ", obs[40:46])
+            #     print("obs_ang_vel: ", obs[46:49])
+            #     print("obs_joint_pos: ", obs[49:69])
+            #     print("obs_joint_vel: ", obs[69:89])
+            #     print("last_action: ", obs[89:109])
 
             action, _ = env.get_session_output(obs_tensor)
             action = action.flatten()
 
-            if env.time_steps == 1:
-                print("action: ", action)
-                print("="*60)
+            # if env.time_steps == 1:
+            #     print("action: ", action)
+            #     print("="*60)
             
             # 执行动作
             obs, _, done, _ = env.step(action)

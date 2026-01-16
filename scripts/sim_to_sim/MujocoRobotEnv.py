@@ -41,7 +41,7 @@ class MuJoCoRobotEnv:
         self.body_indexes = self.get_body_index(self.body_names)
         self.robot_anchor_body_index = self.get_body_index([self.anchor_body_name])
         self.motion_anchor_body_index = self.body_names.index(self.anchor_body_name)
-        print("anchor index: ", self.robot_anchor_body_index[0], self.motion_anchor_body_index)
+        # print("anchor index: ", self.robot_anchor_body_index[0], self.motion_anchor_body_index)
 
         self.converter = JointOrderConverter()
         # self.joint_index = self.get_joint_index()
@@ -49,22 +49,22 @@ class MuJoCoRobotEnv:
         # print("关节名称: ", self.joint_names)
         self.action_scale = self.get_action_scale()
         self.action_scale_urdf = self.converter.xml_to_urdf(self.action_scale)
-        print("关节scale xml: ", self.action_scale)
-        print("关节scale urdf: ", self.action_scale_urdf)
+        # print("关节scale xml: ", self.action_scale)
+        # print("关节scale urdf: ", self.action_scale_urdf)
         self.kp, self.kd = self.get_kp_kd()
         self.kp_urdf = self.converter.xml_to_urdf(self.kp)
         self.torque_clip = self.get_torque_clip()
         self.joint_pos_min, self.joint_pos_max = self.get_joint_pos_clip()
-        print("关节kp xml: ", self.kp)
-        print("关节kp urdf: ", self.kp_urdf)
-        print("关节joint_pos_min: ", self.joint_pos_min)
-        print("关节joint_pos_max: ", self.joint_pos_max)
+        # print("关节kp xml: ", self.kp)
+        # print("关节kp urdf: ", self.kp_urdf)
+        # print("关节joint_pos_min: ", self.joint_pos_min)
+        # print("关节joint_pos_max: ", self.joint_pos_max)
 
         self.default_pos = self.get_default_pos()
         self.default_joint_pos = self.default_pos[7:]
         self.default_joint_pos_urdf = self.converter.xml_to_urdf(self.default_joint_pos)
-        print("关节offset xml: ", self.default_joint_pos)
-        print("关节offset urdf: ", self.default_joint_pos_urdf)
+        # print("关节offset xml: ", self.default_joint_pos)
+        # print("关节offset urdf: ", self.default_joint_pos_urdf)
 
         self.ObsTerm = ObsTerm(self.robot_anchor_body_index[0], self.default_joint_pos, self.data, self.model)
         
@@ -103,7 +103,7 @@ class MuJoCoRobotEnv:
     
     def get_joint_name(self):
         joint_names = []
-        print("njnt: ", self.model.njnt)
+        # print("njnt: ", self.model.njnt)
         for i in range(self.model.njnt):
             jnt_type = self.model.jnt_type[i]
             name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_JOINT, i)
@@ -211,14 +211,14 @@ class MuJoCoRobotEnv:
             reset_joint_vel
         ], axis=0)
 
-        print("noise qpos: ", qpos)
+        # print("noise qpos: ", qpos)
         self.data.qpos[:] = qpos
         self.data.qvel[:] = qvel
     
         mujoco.mj_forward(self.model, self.data)
 
-        print("init qpos", self.data.qpos)
-        print("init qvel", self.data.qvel)
+        # print("init qpos", self.data.qpos)
+        # print("init qvel", self.data.qvel)
         
         return self.get_observation(motion_state)
     
