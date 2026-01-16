@@ -191,28 +191,27 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # reset environment
     robot = env.unwrapped.scene["robot"]
     # Ensure initial joint positions and velocities are zero for clean controller tests
-    try:
-        with torch.no_grad():
-            if hasattr(robot.data, "joint_pos"):
-                robot.data.joint_pos[:] = torch.zeros_like(robot.data.joint_pos)
-            if hasattr(robot.data, "joint_vel"):
-                robot.data.joint_vel[:] = torch.zeros_like(robot.data.joint_vel)
-    except Exception:
-        pass
+    # try:
+    #     with torch.no_grad():
+    #         if hasattr(robot.data, "joint_pos"):
+    #             robot.data.joint_pos[:] = torch.zeros_like(robot.data.joint_pos)
+    #         if hasattr(robot.data, "joint_vel"):
+    #             robot.data.joint_vel[:] = torch.zeros_like(robot.data.joint_vel)
+    # except Exception:
+    #     pass
 
+    timestep = 0
     joint_pos = robot.data.joint_pos
     body_pos_w = robot.data.body_pos_w
-    print(f"Robot init joint_pos: {joint_pos[0].cpu().numpy()}")
-    if hasattr(robot.data, "joint_vel"):
-        print(f"Robot init joint_vel: {robot.data.joint_vel[0].cpu().numpy()}")
-    
-    timestep = 0
+    # print(f"Robot init joint_pos: {joint_pos[0].cpu().numpy()}")
+    # if hasattr(robot.data, "joint_vel"):
+    #     print(f"Robot init joint_vel: {robot.data.joint_vel[0].cpu().numpy()}")
 
-    root_pos = robot.data.body_pos_w[0, 0].cpu().numpy()    # (x, y, z)
-    root_quat = robot.data.body_quat_w[0, 0].cpu().numpy()  # (w, x, y, z)
+    # root_pos = robot.data.body_pos_w[0, 0].cpu().numpy()    # (x, y, z)
+    # root_quat = robot.data.body_quat_w[0, 0].cpu().numpy()  # (w, x, y, z)
 
-    print("root_pos:", root_pos)
-    print("root_quat (w,x,y,z):", root_quat)
+    # print("root_pos:", root_pos)
+    # print("root_quat (w,x,y,z):", root_quat)
     
     if args_cli.onnx_flag == True:
         if args_cli.onnx_file is None:
@@ -238,7 +237,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     obs, _ = env.get_observations()
     # 从底层环境中获取 MotionCommand 对象（使用 unwrapped 访问底层环境）
-    motion_command = env.unwrapped.command_manager.get_term("motion")
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
@@ -246,8 +244,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             # get current robot joint states (位置和速度)
             try:
                 robot = env.unwrapped.scene["robot"]
+                motion_command = env.unwrapped.command_manager.get_term("motion")
                 joint_pos = robot.data.joint_pos  # shape: (num_envs, num_joints)
-                joint_vel = robot.data.joint_vel  # shape: (num_envs, num_joints)
                 joint_vel = robot.data.joint_vel  # shape: (num_envs, num_joints)
                 
                 # print for first environment only to avoid clutter
@@ -262,7 +260,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     print("obs motion vel: ", obs[0, 20:40])
                     print("obs_quat: ", obs[0, 40:46])
                     print("obs_ang_vel: ", obs[0, 46:49])
-                    # print("robot_ang_vel: ", robot.data.root_ang_vel_w)
+                    print("robot_joint_pos: ", joint_pos)
                     print("obs_joint_pos: ", obs[0, 49:69])
                     print("obs_joint_vel: ", obs[0, 69:89])
                     print("last_action: ", obs[0, 89:109])

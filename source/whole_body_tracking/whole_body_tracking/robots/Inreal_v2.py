@@ -55,7 +55,7 @@ Inreal_V2_CYLINDER_CFG = ArticulationCfg(
     ),
     soft_joint_pos_limit_factor=0.9,
     actuators={
-        "legs": ImplicitActuatorCfg(
+        "legs": IdealPDActuatorCfg(
             joint_names_expr=[
                 ".*_hip_yaw_joint",
                 ".*_hip_roll_joint",
@@ -105,7 +105,7 @@ Inreal_V2_CYLINDER_CFG = ArticulationCfg(
                 ".*_ankle_roll_joint": ARMATURE_L4,
             },
         ),
-        "waist": ImplicitActuatorCfg(
+        "waist": IdealPDActuatorCfg(
             joint_names_expr=[
                 "waist_yaw_joint", 
                 "waist_pitch_joint"
@@ -130,7 +130,7 @@ Inreal_V2_CYLINDER_CFG = ArticulationCfg(
                       "waist_pitch_joint": ARMATURE_W_P,
                 },
         ),
-        "arms": ImplicitActuatorCfg(
+        "arms": IdealPDActuatorCfg(
             joint_names_expr=[
                 ".*_shoulder_pitch_joint",
                 ".*_shoulder_roll_joint",

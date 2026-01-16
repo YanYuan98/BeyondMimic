@@ -21,6 +21,7 @@ python -m pip install -e source/whole_body_tracking
 
 ## 训练过程
 ### 数据预处理
+- 基于[GMR](https://gitee.com/xmech/inrealgmrretarget)方法将人类数据重定向到Inreal机器人上，得到.csv数据文件
 - 首先将csv的数据格式转换为npz的数据格式,这将自动将处理后的运动文件上传到 WandB 注册表，输出文件名为 {motion_name}。如果要添加新的机器人,则需要:
   - 在`source/whole_body_tracking/whole_body_tracking/assets/`中添加机器人模型,urdf文件
   - 在`source/whole_body_tracking/whole_body_tracking/robots/`中创建一个新的机器人配置文件,如`inreal.py`,修改其中参数
@@ -45,6 +46,11 @@ python scripts/replay_npz.py --registry_name=yanyuan98-mirrorme-org/wandb-regist
 CUDA_VISIBLE_DEVICES=1 python scripts/rsl_rl/train.py --task=Tracking-Flat-Inreal-Wo-State-Estimation-v2 --registry_name yanyuan98-mirrorme-org/wandb-registry-motions/36_09_walk_forward_turn_back --logger wandb --log_project_name BeyondMimic_Inreal_v2 --run_name walk_forward_turn_back --headless
 ```
 `CUDA_VISIBLE_DEVICES=1`表示用第二个显卡训练，程序会自动将其映射为cuda:0
+- 注意`tracking_env_cfg.py`的self.episode_length_s = 10.0时间与运动轨迹的时间长度
+
+#### 训练Tips：
+1. 通过GMR重映射后的动作，其运动轨迹光滑性显著影响控制器表现效果和sim-to-sim效果，因此可通过[robot-motion-editor](https://github.com/project-instinct/robot-motion-editor)编辑器对机器人轨迹进行光滑处理
+2. beyondmimic自带的基于固有频率的pd参数计算方法会导致kp和kd项过大，不利于sim-to-sim和实物部署，建议重新设置
 
 ### 测试
 #### 控制器测试
@@ -94,14 +100,14 @@ python scripts/sim_to_sim/sim_to_sim.py --task Inreal_v2 --policy /home/yyy/Docu
 
 - **`scripts`**
   包含用于预处理运动数据、训练策略和评估已训练策略的实用脚本。
-  
+
 
 ## 代码架构
 ### 训练代码
 `scripts/rsl_rl/train.py`中定义训练代码
 - task注册：`whole_body_tracking/tasks/Inreal_v2/__init__.py`：通过gym.register中注册了不同task对应的RL env、env_cfg、agent_cfg
 - 任务选择：`train.py`中通过`@hydra_task_config(args_cli.task, "rsl_rl_cfg_entry_point")`动态选择不同的训练任务及其对应的cfg文件
-- 环境创建：`env = gym.make(args_cli.task ...)`， make中基于--task的id通过`entry_point`，基于`isaaclab.envs:ManagerBasedRLEnv`创建训练环境
+- 环境创建：`env = gym.make(args_cli.task ...)`， make中基于--task的id通过`entry_point`，调用吗`isaaclab.envs:ManagerBasedRLEnv`创建训练环境
 - 算法定义：`runner = OnPolicyRunner(env, agent_cfg.to_dict() ...)`基于rsl_rl库定义rl训练算法
 
 ### 运动控制代码
@@ -124,7 +130,7 @@ python scripts/sim_to_sim/sim_to_sim.py --task Inreal_v2 --policy /home/yyy/Docu
 - `command`：指令，`MotionCommandCfg`类型，并在`manager_based_env.py/__init__`实例化，在`mdp/command.py`中定义motion data的指令数据类型、command更新和自适应采样策略。
 - `action`：动作，`ActionsCfg`类型，设置action类型以及相应的scale和offset等参数，`JointPositionAction`表示action代表关节目标位置，可通过`process_actions`和`apply_actions`等函数从网络输出action计算关节目标位置，并将其写入`Articulation`中
 - `Observations`：观测量，`ObservationsCfg`类型，在`observation.py`中定义观测量获取函数，并在`managers/observation_manager.py`中在调用时compute所有观测量
-- `event`：扰动事件，`EventCfg`类型，在`events.py`中定义扰动施加函数，并在`managers/event_manager.py`中在调用时compute所有扰动量
+- `event`：域随机化，`EventCfg`类型，在`events.py`中定义域随机化函数，并在`managers/event_manager.py`中在调用时compute所有量
 - `reward`：奖励函数，`RewardsCfg`类型，在`reward.py`中定义奖励函数计算，并在`managers/reward_manager.py`中在调用时compute所有reward
 - `terminations`：终止条件，`TerminationsCfg`类型，在`terminations.py`中定义终止条件，并在`managers/termination_manager.py`中在调用时compute所有终止条件
 
@@ -133,6 +139,7 @@ python scripts/sim_to_sim/sim_to_sim.py --task Inreal_v2 --policy /home/yyy/Docu
 训练环境在isaaclab库中的`source/isaaclab/isaaclab/`中定义
 - Env：`envs/manager_based_rl_env.py`
   - `__init__`：scene创建；加载cfg文件；调用`managers/`中函数定义observations，actions，rewards，events等manager，定义状态和动作空间
+    - 初始化时的环境reset：`env = RslRlVecEnvWrapper(env)`在符合rsl-rl的环境时会调用`env.reset`初始化所有所有场景、机器人等的状态,`env.reset`->`env._reset_idx`->`info = self.command_manager.reset(env_ids)`通过resample重置机器人状态
   - `step`：
     - action映射：通过self.`action_manager.process_action(action)`调用`ActionsCfg`定义的action的joint_action类型(如`JointPositionAction`)，基于该类型的`process_action`函数将action映射到target_pos
     - 设置关节目标位置或者力矩：调用`self.action_manager.apply_action`->`joint_action.apply_action`->`articulation.set_joint_position_target`函数设置各关节的目标位置或者力矩

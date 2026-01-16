@@ -12,7 +12,7 @@ from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sensors import ContactSensorCfg
+from isaaclab.sensors import ContactSensorCfg, ImuCfg
 from isaaclab.terrains import TerrainImporterCfg
 
 ##
@@ -71,6 +71,13 @@ class MySceneCfg(InteractiveSceneCfg):
     contact_forces = ContactSensorCfg(
         prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True, force_threshold=10.0, debug_vis=True
     )
+    # sensors - IMU on torso_link
+    imu = ImuCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/torso_link",  # 传感器附加到 torso_link
+        update_period=0.005,  # 更新频率，通常与 sim.dt 一致
+        history_length=0,  # 不需要历史数据
+        debug_vis=False,  # 是否显示调试可视化
+    )
 
 
 ##
@@ -125,6 +132,10 @@ class ObservationsCfg:
         )
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.5, n_max=0.5))
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
+        
+        # imu在胸口,因此采用torso_link上的imu数据作为ang_vel数据
+        # base_ang_vel = ObsTerm(func=mdp.imu_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
+
         joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-0.5, n_max=0.5))
         actions = ObsTerm(func=mdp.last_action)
@@ -331,6 +342,6 @@ class TrackingEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physics_material = self.scene.terrain.physics_material
         self.sim.physx.gpu_max_rigid_patch_count = 10 * 2**15
         # viewer settings
-        self.viewer.eye = (2.0, 2.0, 1.5)
+        self.viewer.eye = (2.5, 2.5, 1.5)
         self.viewer.origin_type = "asset_root"
         self.viewer.asset_name = "robot"

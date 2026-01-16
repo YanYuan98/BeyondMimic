@@ -3,8 +3,8 @@
 .. code-block:: bash
 
     # Usage
-    python csv_to_npz.py --input_file LAFAN/dance1_subject2.csv --input_fps 30 --frame_range 122 722 \
-    --output_file ./motions/dance1_subject2.npz --output_fps 50
+    将经过robot-motion-editor光滑处理后的.npz的数据进行拓展，加入"body_pos_w", body_quat_w",
+    "body_lin_vel_w", "body_ang_vel_w"等beyondmimic需要的数u
 """
 
 """Launch Isaac Sim Simulator first."""

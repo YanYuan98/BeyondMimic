@@ -217,8 +217,6 @@ class MuJoCoRobotEnv:
     
         mujoco.mj_forward(self.model, self.data)
 
-        self.time_steps += 1
-
         print("init qpos", self.data.qpos)
         print("init qvel", self.data.qvel)
         

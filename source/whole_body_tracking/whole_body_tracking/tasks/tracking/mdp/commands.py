@@ -252,7 +252,6 @@ class MotionCommand(CommandTerm):
             return
         # print("time: ", self.time_steps[env_ids])
         self._adaptive_sampling(env_ids)
-        # print("time after reset: ", self.time_steps[env_ids])
 
         root_pos = self.body_pos_w[:, 0].clone()
         root_ori = self.body_quat_w[:, 0].clone()
@@ -284,8 +283,6 @@ class MotionCommand(CommandTerm):
         )
         # print("joint_pos: ", joint_pos[0])
         # print("joint_vel: ", joint_vel[0])
-        # print("root_pos: ", root_pos[env_ids], root_ori[env_ids])
-        # print("root_vel: ", root_lin_vel[env_ids], root_ang_vel[env_ids])
 
         self.robot.write_joint_state_to_sim(joint_pos[env_ids], joint_vel[env_ids], env_ids=env_ids)
         self.robot.write_root_state_to_sim(
@@ -294,7 +291,18 @@ class MotionCommand(CommandTerm):
         )
 
     def _update_command(self):
-        self.time_steps += 1
+        # 1. 获取当前需要手动重置的环境（由 termination_manager 产生）
+        # 注意：在 step 函数中，reset_idx 运行后，这些环境应该是刚刚重置完的
+        manual_reset_ids = self._env.reset_buf.nonzero(as_tuple=False).squeeze(-1)
+
+        # 2. 只有非手动重置的环境才执行自增
+        # 创建一个掩码，排除掉本轮刚手动重置的环境
+        update_ids = torch.ones(self.num_envs, dtype=torch.bool, device=self.device)
+        update_ids[manual_reset_ids] = False
+        
+        # 仅对正常运行的环境增加时间步
+        self.time_steps[update_ids] += 1
+        # self.time_steps += 1
         env_ids = torch.where(self.time_steps >= self.motion.time_step_total)[0]
         self._resample_command(env_ids)
 

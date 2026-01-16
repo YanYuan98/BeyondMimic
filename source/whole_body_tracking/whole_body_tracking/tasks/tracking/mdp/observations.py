@@ -7,6 +7,11 @@ from isaaclab.utils.math import matrix_from_quat, subtract_frame_transforms
 
 from whole_body_tracking.tasks.tracking.mdp.commands import MotionCommand
 
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers.manager_base import ManagerTermBase
+from isaaclab.managers.manager_term_cfg import ObservationTermCfg
+from isaaclab.sensors import Camera, Imu, RayCaster, RayCasterCamera, TiledCamera
+
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
 
@@ -95,3 +100,24 @@ def motion_anchor_ori_b(env: ManagerBasedEnv, command_name: str) -> torch.Tensor
 
     # return mat
     return mat[..., :2].reshape(mat.shape[0], -1)
+
+def imu_projected_gravity(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("imu")) -> torch.Tensor:
+    """Gravity vector projected into IMU body frame.
+    
+    This is equivalent to the orientation measurement but more intuitive for locomotion.
+    
+    Returns:
+        torch.Tensor: Projected gravity vector. Shape is (num_envs, 3).
+    """
+    from isaaclab.utils.math import quat_rotate_inverse
+    
+    asset: Imu = env.scene[asset_cfg.name]
+    quat_w = asset.data.quat_w  # w, x, y, z
+    
+    # Gravity vector in world frame
+    gravity_w = torch.tensor([0.0, 0.0, -1.0], device=env.device).repeat(env.num_envs, 1)
+    
+    # Rotate gravity to body frame
+    gravity_b = quat_rotate_inverse(quat_w, gravity_w)
+    
+    return gravity_b
